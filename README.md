@@ -13,4 +13,4 @@ npm run dev
 1. پروژه را در GitHub بگذار و در Vercel ایمپورت کن.
 2. Vercel > Storage > Create > Neon و به پروژه وصلش کن (DATABASE_URL و DATABASE_URL_UNPOOLED خودکار ست می‌شوند).
 3. در Environment Variables مقدار `AUTH_SECRET` را اضافه کن (خروجی `openssl rand -base64 32`).
-4. Deploy. دستور build جدول‌ها را خودش روی Neon می‌سازد (`prisma db push`).
+4. Deploy. دستور build خودش کامپوننت‌های Arc را نصب می‌کند و جدول‌ها را روی Neon می‌سازد؛ نیازی به commit کردن `components/arc` نیست.
