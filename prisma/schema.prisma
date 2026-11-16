@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+// role: "COACH" | "ATHLETE"
+model User {
+  id           String      @id @default(cuid())
+  phone        String      @unique
+  firstName    String
+  lastName     String
+  passwordHash String
+  role         String
+  createdAt    DateTime    @default(now())
+  gym          Gym?
+  membership   Membership?
+}
+
+// Each coach owns at most one gym (coachId is unique)
+model Gym {
+  id          String       @id @default(cuid())
+  name        String
+  code        String       @unique
+  coachId     String       @unique
+  coach       User         @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  createdAt   DateTime     @default(now())
+  memberships Membership[]
+}
+
+// status: "PENDING" | "APPROVED". Each athlete has at most one membership (athleteId is unique)
+model Membership {
+  id          String       @id @default(cuid())
+  gymId       String
+  athleteId   String       @unique
+  status      String       @default("PENDING")
+  createdAt   DateTime     @default(now())
+  approvedAt  DateTime?
+  gym         Gym          @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  athlete     User         @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  payments    Payment[]
+  attendances Attendance[]
+
+  @@index([gymId])
+}
+
+model Payment {
+  id           String     @id @default(cuid())
+  membershipId String
+  amount       Int // toman
+  paidAt       DateTime // stored at 12:00 UTC of the paid day
+  durationDays Int // 30 | 60 | 90
+  createdAt    DateTime   @default(now())
+  membership   Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@index([membershipId])
+}
+
+model Attendance {
+  id           String     @id @default(cuid())
+  membershipId String
+  date         String // Gregorian YYYY-MM-DD
+  present      Boolean
+  membership   Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@unique([membershipId, date])
+}
