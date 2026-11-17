@@ -1,6 +1,24 @@
 /* Service worker: receives web-push messages and shows notifications. */
-self.addEventListener("install", () => self.skipWaiting());
+const OFFLINE_CACHE = "offline-v1";
+const OFFLINE_URL = "/offline.html";
+
+self.addEventListener("install", (e) => {
+  e.waitUntil(caches.open(OFFLINE_CACHE).then((c) => c.add(OFFLINE_URL)).catch(() => {}));
+  self.skipWaiting();
+});
 self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
+
+// A fetch handler is required for the browser to treat the site as an installable app.
+// Pages always come from the network; only when offline do we show a small fallback page.
+self.addEventListener("fetch", (event) => {
+  if (event.request.mode !== "navigate") return;
+  event.respondWith(
+    fetch(event.request).catch(async () => {
+      const cached = await caches.match(OFFLINE_URL);
+      return cached || new Response("Offline", { status: 503, headers: { "Content-Type": "text/plain" } });
+    }),
+  );
+});
 
 self.addEventListener("push", (event) => {
   let data = {};
