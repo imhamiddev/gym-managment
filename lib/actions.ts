@@ -7,7 +7,7 @@ import { db } from "./db";
 import { createSession, destroySession, getUser } from "./auth";
 import { isYmd, toEn, ymdToDate } from "./date";
 
-export type FormState = { error?: string };
+export type FormState = { error?: string; ok?: boolean };
 export type Result = { error?: string };
 
 const PHONE = /^09\d{9}$/;
@@ -45,6 +45,18 @@ export async function login(_: FormState, fd: FormData): Promise<FormState> {
   }
   await createSession(user.id);
   redirect(user.role === "COACH" ? "/coach" : "/athlete");
+}
+
+export async function updateProfile(_: FormState, fd: FormData): Promise<FormState> {
+  const user = await getUser();
+  if (!user) return { error: DENIED };
+  const firstName = clean(fd.get("firstName")).replace(/\s+/g, " ");
+  const lastName = clean(fd.get("lastName")).replace(/\s+/g, " ");
+  if (!firstName || !lastName) return { error: "نام و نام خانوادگی را وارد کنید." };
+  if (firstName.length > 40 || lastName.length > 60) return { error: "نام یا نام خانوادگی بیش از حد طولانی است." };
+  await db.user.update({ where: { id: user.id }, data: { firstName, lastName } });
+  revalidatePath("/", "layout");
+  return { ok: true };
 }
 
 export async function logout() {

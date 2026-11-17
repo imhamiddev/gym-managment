@@ -1,4 +1,4 @@
-import { Badge } from "@/components/arc/badge/badge";
+import { Badge } from "@/components/ui/badge";
 import { formatDays } from "@/lib/date";
 
 export function RemainingBadge({ days }: { days: number | null }) {

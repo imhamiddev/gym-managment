@@ -5,5 +5,5 @@
   "tsx": true,
   "tailwind": { "config": "", "css": "app/globals.css", "baseColor": "neutral", "cssVariables": true },
   "aliases": { "components": "@/components", "utils": "@/lib/utils", "lib": "@/lib", "ui": "@/components/ui", "hooks": "@/hooks" },
-  "registries": { "@uiarc": "https://uiarc.dev/r/{name}.json" }
+  "registries": { "@beui": "https://beui.dev/r/{name}.json" }
 }

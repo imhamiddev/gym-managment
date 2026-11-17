@@ -1,84 +1,103 @@
 import Link from "next/link";
-import { Button } from "@/components/arc/button/button";
-import { Badge } from "@/components/arc/badge/badge";
+import { HeroDemo } from "@/components/landing/HeroDemo";
+import { ButtonLink } from "@/components/ui/button";
+import { Icon, type IconName } from "@/components/ui/icon";
+import { Brand } from "@/components/ui/logo";
+import { TONE, type Tone } from "@/components/ui/badge";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { getUser } from "@/lib/auth";
+import { cn } from "@/lib/utils";
 
-const sample = [
-  { name: "سارا احمدی", days: "۲۳ روز", tone: "success" as const },
-  { name: "امیر کریمی", days: "۶ روز", tone: "warning" as const },
-  { name: "نگار رستمی", days: "۴۱ روز", tone: "success" as const },
-  { name: "رضا مرادی", days: "منقضی شده", tone: "danger" as const },
+const FEATURES: { icon: IconName; tone: Tone; title: string; text: string }[] = [
+  { icon: "wallet", tone: "tuition", title: "مدیریت شهریه", text: "مبلغ، تاریخ شمسی و مدت ۳۰، ۶۰ یا ۹۰ روزه را ثبت کنید. هر زمان خواستید ویرایش یا حذف کنید." },
+  { icon: "members", tone: "members", title: "مدیریت اعضا", text: "فهرست اعضا با تعداد روزهای باقی‌مانده، و مشخصات کامل هر نفر با یک ضربه." },
+  { icon: "attendance", tone: "attendance", title: "حضور و غیاب", text: "برای هر جلسه حاضر و غایب را علامت بزنید. ورزشکار سابقه خودش را می‌بیند." },
 ];
+
+const STEPS = [
+  { title: "مربی باشگاه می‌سازد.", text: "نام باشگاه را ثبت می‌کند و یک کد اختصاصی می‌گیرد." },
+  { title: "ورزشکار کد را وارد می‌کند.", text: "بعد از ثبت‌نام، با کد باشگاه درخواست عضویت می‌فرستد." },
+  { title: "مربی تایید می‌کند.", text: "درخواست را تایید یا لغو می‌کند و مدیریت باشگاه شروع می‌شود." },
+];
+
+const ghost = "inline-flex h-9 items-center rounded-full px-4 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-card hover:text-foreground";
 
 export default async function Landing() {
   const user = await getUser();
   const panel = user ? (user.role === "COACH" ? "/coach" : "/athlete") : null;
 
   return (
-    <div className="container">
-      <header className="land-nav">
-        <span className="brand">باشگاه‌یار</span>
-        <div className="row">
-          {panel ? (
-            <Link href={panel}><Button size="sm">ورود به پنل</Button></Link>
-          ) : (
-            <>
-              <Link href="/login"><Button variant="ghost" size="sm">ورود</Button></Link>
-              <Link href="/register"><Button size="sm">ثبت‌نام</Button></Link>
-            </>
-          )}
+    <div>
+      <header className="glass sticky top-0 z-30 border-b border-border pt-safe">
+        <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
+          <Brand />
+          <div className="flex items-center gap-1.5">
+            <ThemeToggle variant="circle" start="top-left" className="size-10 rounded-full text-muted-foreground transition-colors hover:bg-card hover:text-foreground active:scale-90" />
+            {panel ? (
+              <ButtonLink href={panel} size="sm">ورود به پنل</ButtonLink>
+            ) : (
+              <>
+                <Link href="/login" className={ghost}>ورود</Link>
+                <ButtonLink href="/register" size="sm">ثبت‌نام</ButtonLink>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
-      <section className="hero">
-        <div>
-          <h1>شهریه، اعضا و حضور و غیاب باشگاه، یک‌جا</h1>
-          <p className="muted">مربی باشگاه را می‌سازد و ورزشکاران با یک کد عضو می‌شوند. دیگر دفترچه و پیام‌های پراکنده لازم نیست.</p>
-          <div className="row">
-            <Link href="/register?role=coach"><Button size="lg">ساخت باشگاه</Button></Link>
-            <Link href="/register"><Button size="lg" variant="secondary">عضویت با کد باشگاه</Button></Link>
-          </div>
-        </div>
-        <div className="preview" aria-label="نمونه‌ای از لیست اعضا">
-          <div className="preview-head"><span>اعضای باشگاه</span><span className="muted">شهریه باقی‌مانده</span></div>
-          {sample.map((s) => (
-            <div className="att-row" key={s.name}>
-              <span>{s.name}</span>
-              <Badge tone={s.tone} dot>{s.days}</Badge>
+      <main className="mx-auto w-full max-w-6xl px-4 sm:px-6">
+        <section className="grid items-center gap-10 py-12 sm:py-16 lg:grid-cols-[1.05fr_1fr] lg:gap-16 lg:py-24">
+          <div>
+            <h1 className="text-[2rem] font-extrabold leading-[1.5] sm:text-5xl sm:leading-[1.45]">شهریه، اعضا و حضور و غیاب باشگاه، یک‌جا</h1>
+            <p className="mb-8 mt-5 max-w-[34ch] text-base leading-8 text-muted-foreground sm:text-lg">
+              مربی باشگاه را می‌سازد و ورزشکاران با یک کد عضو می‌شوند. دیگر دفترچه و پیام‌های پراکنده لازم نیست.
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <ButtonLink href="/register?role=coach" size="lg">ساخت باشگاه</ButtonLink>
+              <ButtonLink href="/register" size="lg" variant="secondary">عضویت با کد باشگاه</ButtonLink>
             </div>
+          </div>
+          <div aria-label="نمونه‌ای از حضور و غیاب">
+            <HeroDemo />
+            <p className="mt-3 text-center text-xs text-muted-foreground">روی هر نفر بزنید و وضعیت حضور را عوض کنید.</p>
+          </div>
+        </section>
+
+        <section className="grid gap-4 md:grid-cols-3" aria-label="امکانات">
+          {FEATURES.map((f) => (
+            <article key={f.title} className="rounded-[28px] border border-border bg-background p-6 shadow-card">
+              <span className={cn("mb-5 grid size-12 place-items-center rounded-2xl", TONE[f.tone].soft)}>
+                <Icon name={f.icon} size={26} set="bulk" />
+              </span>
+              <h2 className="mb-2 text-lg font-bold">{f.title}</h2>
+              <p className="text-sm leading-7 text-muted-foreground">{f.text}</p>
+            </article>
           ))}
-        </div>
-      </section>
+        </section>
 
-      <section className="features">
-        <div>
-          <h3>مدیریت شهریه</h3>
-          <p className="muted">مبلغ، تاریخ شمسی و مدت ۳۰، ۶۰ یا ۹۰ روزه را ثبت کنید. هر زمان خواستید ویرایش یا حذف کنید.</p>
-        </div>
-        <div>
-          <h3>مدیریت اعضا</h3>
-          <p className="muted">فهرست اعضا با تعداد روزهای باقی‌مانده، و مشخصات کامل هر نفر با یک ضربه.</p>
-        </div>
-        <div>
-          <h3>حضور و غیاب</h3>
-          <p className="muted">برای هر جلسه حاضر و غایب را علامت بزنید. ورزشکار سابقه خودش را می‌بیند.</p>
-        </div>
-      </section>
+        <section className="grid gap-8 py-16 lg:grid-cols-[1fr_1.5fr] lg:gap-16 lg:py-24">
+          <h2 className="text-2xl font-bold sm:text-3xl">شروع در سه قدم</h2>
+          <ol className="grid gap-4">
+            {STEPS.map((s, i) => (
+              <li key={s.title} className="flex gap-4 rounded-3xl border border-border bg-background p-5">
+                <span className="grid size-10 shrink-0 place-items-center rounded-full bg-primary/12 font-bold text-primary">{["۱", "۲", "۳"][i]}</span>
+                <div>
+                  <p className="font-semibold">{s.title}</p>
+                  <p className="text-sm leading-7 text-muted-foreground">{s.text}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
 
-      <section className="steps">
-        <h2>شروع در سه قدم</h2>
-        <ol>
-          <li><div><b>مربی باشگاه می‌سازد.</b><p className="muted">نام باشگاه را ثبت می‌کند و یک کد اختصاصی می‌گیرد.</p></div></li>
-          <li><div><b>ورزشکار کد را وارد می‌کند.</b><p className="muted">بعد از ثبت‌نام، با کد باشگاه درخواست عضویت می‌فرستد.</p></div></li>
-          <li><div><b>مربی تایید می‌کند.</b><p className="muted">درخواست را تایید یا لغو می‌کند و مدیریت باشگاه شروع می‌شود.</p></div></li>
-        </ol>
-      </section>
-
-      <section className="cta">
-        <h2>باشگاه‌تان را امروز راه بیندازید</h2>
-        <Link href="/register?role=coach"><Button size="lg">ثبت‌نام مربی</Button></Link>
-      </section>
-      <footer className="foot">باشگاه‌یار</footer>
+        <section className="mb-10 flex flex-col items-center gap-5 rounded-[32px] bg-primary px-6 py-12 text-center text-primary-foreground">
+          <h2 className="text-2xl font-bold leading-10 sm:text-3xl">باشگاه‌تان را امروز راه بیندازید</h2>
+          <Link href="/register?role=coach" className="inline-flex h-12 items-center rounded-full bg-background px-7 font-medium text-foreground transition-transform active:scale-95">
+            ثبت‌نام مربی
+          </Link>
+        </section>
+      </main>
+      <footer className="px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-4 text-center text-sm text-muted-foreground">باشگاه‌یار</footer>
     </div>
   );
 }

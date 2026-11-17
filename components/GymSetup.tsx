@@ -1,36 +1,71 @@
 "use client";
+
+import { AnimatePresence, motion } from "motion/react";
 import { useActionState, useState, useTransition } from "react";
-import { Button } from "@/components/arc/button/button";
-import { Input } from "@/components/arc/input/input";
-import { createGym, joinGym, respondRequest, cancelRequest, type FormState } from "@/lib/actions";
+import { FormError } from "@/components/FormError";
+import { Avatar } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Icon } from "@/components/ui/icon";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/components/ui/toast";
+import { cancelRequest, createGym, joinGym, respondRequest, type FormState } from "@/lib/actions";
 
 export function CreateGymForm() {
   const [state, action, pending] = useActionState<FormState, FormData>(createGym, {});
   return (
-    <form action={action} className="panel stack" style={{ maxWidth: 460 }}>
-      <div>
-        <h2>باشگاه خود را بسازید</h2>
-        <p className="muted">بعد از ساخت، یک کد اختصاصی می‌گیرید و ورزشکاران با آن درخواست عضویت می‌دهند. هر مربی یک باشگاه می‌تواند داشته باشد.</p>
-      </div>
-      <Input label="نام باشگاه" name="name" required />
-      {state.error && <p role="alert" className="form-error">{state.error}</p>}
-      <div><Button type="submit" loading={pending}>ساخت باشگاه</Button></div>
-    </form>
+    <Card className="mx-auto w-full max-w-lg shadow-card">
+      <form action={action} className="flex flex-col gap-5">
+        <CardHeader>
+          <span className="mb-2 grid size-14 place-items-center rounded-2xl bg-primary/12 text-primary">
+            <Icon name="home" size={28} set="bulk" />
+          </span>
+          <CardTitle as="h2" className="text-lg">باشگاه خود را بسازید</CardTitle>
+          <CardDescription>
+            بعد از ساخت، یک کد اختصاصی می‌گیرید و ورزشکاران با آن درخواست عضویت می‌دهند. هر مربی یک باشگاه می‌تواند داشته باشد.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <Input label="نام باشگاه" name="name" placeholder="مثلا باشگاه آریا" required leftIcon={<Icon name="home" size={18} />} />
+          <FormError message={state.error} />
+          <Button type="submit" size="lg" loading={pending}>ساخت باشگاه</Button>
+        </CardContent>
+      </form>
+    </Card>
   );
 }
 
 export function JoinGymForm() {
   const [state, action, pending] = useActionState<FormState, FormData>(joinGym, {});
   return (
-    <form action={action} className="panel stack" style={{ maxWidth: 460 }}>
-      <div>
-        <h2>عضو یک باشگاه شوید</h2>
-        <p className="muted">کد باشگاه را از مربی‌تان بگیرید و اینجا وارد کنید. درخواست شما برای تایید به مربی می‌رسد.</p>
-      </div>
-      <Input label="کد باشگاه" name="code" dir="ltr" maxLength={6} autoCapitalize="characters" placeholder="ABC123" required />
-      {state.error && <p role="alert" className="form-error">{state.error}</p>}
-      <div><Button type="submit" loading={pending}>ارسال درخواست</Button></div>
-    </form>
+    <Card className="mx-auto w-full max-w-lg shadow-card">
+      <form action={action} className="flex flex-col gap-5">
+        <CardHeader>
+          <span className="mb-2 grid size-14 place-items-center rounded-2xl bg-members/12 text-members">
+            <Icon name="ticket" size={28} set="bulk" />
+          </span>
+          <CardTitle as="h2" className="text-lg">عضو یک باشگاه شوید</CardTitle>
+          <CardDescription>کد باشگاه را از مربی‌تان بگیرید و اینجا وارد کنید. درخواست شما برای تایید به مربی می‌رسد.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <Input
+            label="کد باشگاه"
+            name="code"
+            dir="ltr"
+            maxLength={6}
+            autoCapitalize="characters"
+            autoComplete="off"
+            placeholder="ABC123"
+            required
+            leftIcon={<Icon name="ticket" size={18} />}
+            classNames={{ input: "uppercase tracking-[0.3em]" }}
+          />
+          <FormError message={state.error} />
+          <Button type="submit" size="lg" loading={pending}>ارسال درخواست</Button>
+        </CardContent>
+      </form>
+    </Card>
   );
 }
 
@@ -45,50 +80,100 @@ export function CancelRequestButton() {
 
 export function CodeCopy({ code }: { code: string }) {
   const [copied, setCopied] = useState(false);
+  const toast = useToast();
   return (
     <Button
-      variant="secondary"
-      size="sm"
+      variant="soft"
       onClick={async () => {
-        try { await navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch {}
+        try {
+          await navigator.clipboard.writeText(code);
+          setCopied(true);
+          toast.success("کد باشگاه کپی شد");
+          setTimeout(() => setCopied(false), 1800);
+        } catch {
+          toast.error("کپی انجام نشد", "کد را به صورت دستی کپی کنید.");
+        }
       }}
     >
+      <span className="relative grid size-[18px] place-items-center">
+        <AnimatePresence initial={false} mode="popLayout">
+          <motion.span
+            key={copied ? "ok" : "copy"}
+            initial={{ opacity: 0, scale: 0.5, rotate: -30 }}
+            animate={{ opacity: 1, scale: 1, rotate: 0 }}
+            exit={{ opacity: 0, scale: 0.5 }}
+            transition={{ duration: 0.16 }}
+            className="col-start-1 row-start-1"
+          >
+            <Icon name={copied ? "check" : "copy"} size={18} />
+          </motion.span>
+        </AnimatePresence>
+      </span>
       {copied ? "کپی شد" : "کپی کد"}
     </Button>
   );
 }
 
 export function RequestsList({ requests }: { requests: { id: string; name: string; phone: string }[] }) {
+  const toast = useToast();
   const [busy, setBusy] = useState<string | null>(null);
+  const [gone, setGone] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [, start] = useTransition();
 
-  const respond = (id: string, approve: boolean) => {
+  const respond = (id: string, name: string, approve: boolean) => {
     setBusy(id + approve);
     setError(null);
     start(async () => {
       const r = await respondRequest(id, approve);
       if (r.error) setError(r.error);
+      else {
+        setGone((g) => new Set(g).add(id));
+        toast.success(approve ? "عضویت تایید شد" : "درخواست لغو شد", name);
+      }
       setBusy(null);
     });
   };
 
-  if (!requests.length) return <div className="empty">درخواست جدیدی ندارید.</div>;
+  const rows = requests.filter((r) => !gone.has(r.id));
+  if (!rows.length && !error) {
+    return <EmptyState icon="addUser" tone="members" title="درخواست جدیدی ندارید" description="وقتی ورزشکاری با کد باشگاه درخواست بدهد، اینجا نمایش داده می‌شود." className="py-10" />;
+  }
   return (
     <div>
-      {requests.map((r) => (
-        <div className="att-row" key={r.id}>
-          <div>
-            <div>{r.name}</div>
-            <div className="muted ltr" style={{ fontSize: 14, textAlign: "start" }}>{r.phone}</div>
-          </div>
-          <div className="row">
-            <Button size="sm" loading={busy === r.id + true} onClick={() => respond(r.id, true)}>تایید</Button>
-            <Button size="sm" variant="secondary" loading={busy === r.id + false} onClick={() => respond(r.id, false)}>لغو</Button>
-          </div>
-        </div>
-      ))}
-      {error && <p role="alert" className="form-error" style={{ padding: 16 }}>{error}</p>}
+      <ul className="divide-y divide-border">
+        <AnimatePresence initial={false}>
+          {rows.map((r) => {
+            const [first, ...rest] = r.name.split(" ");
+            return (
+              <motion.li
+                key={r.id}
+                layout="position"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0, x: 32 }}
+                transition={{ duration: 0.22 }}
+                className="flex items-center gap-3 px-4 py-3.5 sm:px-5"
+              >
+                <Avatar name={r.name} firstName={first} lastName={rest.join(" ")} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium">{r.name}</p>
+                  <p className="ltr text-xs text-muted-foreground">{r.phone}</p>
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  <Button size="icon" aria-label={`تایید ${r.name}`} loading={busy === r.id + true} onClick={() => respond(r.id, r.name, true)} className="bg-success text-white hover:bg-success/90 dark:text-[#052313]">
+                    <Icon name="check" size={20} />
+                  </Button>
+                  <Button size="icon" variant="danger-soft" aria-label={`رد ${r.name}`} loading={busy === r.id + false} onClick={() => respond(r.id, r.name, false)}>
+                    <Icon name="close" size={20} />
+                  </Button>
+                </div>
+              </motion.li>
+            );
+          })}
+        </AnimatePresence>
+      </ul>
+      <div className="px-4 pb-3 sm:px-5"><FormError message={error} /></div>
     </div>
   );
 }
