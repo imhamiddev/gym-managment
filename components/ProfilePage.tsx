@@ -1,3 +1,4 @@
+import { InstallCard, NotificationsCard } from "@/components/AppSettings";
 import { ProfileForm } from "@/components/ProfileForm";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireUser } from "@/lib/auth";
@@ -29,6 +30,10 @@ export async function ProfilePage({ role }: { role: "COACH" | "ATHLETE" }) {
           gymValue,
         }}
       />
+      <div className="grid gap-5 lg:grid-cols-2">
+        <InstallCard />
+        {role === "ATHLETE" ? <NotificationsCard vapidPublicKey={process.env.VAPID_PUBLIC_KEY || null} /> : null}
+      </div>
     </>
   );
 }

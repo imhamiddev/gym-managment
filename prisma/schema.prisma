@@ -18,6 +18,7 @@ model User {
   createdAt    DateTime    @default(now())
   gym          Gym?
   membership   Membership?
+  pushSubscriptions PushSubscription[]
 }
 
 // Each coach owns at most one gym (coachId is unique)
@@ -43,6 +44,7 @@ model Membership {
   athlete     User         @relation(fields: [athleteId], references: [id], onDelete: Cascade)
   payments    Payment[]
   attendances Attendance[]
+  reminders   ReminderLog[]
 
   @@index([gymId])
 }
@@ -67,4 +69,29 @@ model Attendance {
   membership   Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
 
   @@unique([membershipId, date])
+}
+
+// One row per browser/device that allowed notifications
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// Makes each tuition reminder (2 days / 1 day / due day) go out only once per payment period
+model ReminderLog {
+  id           String     @id @default(cuid())
+  membershipId String
+  endYmd       String // the day the tuition period ends
+  daysLeft     Int // 2 | 1 | 0
+  sentAt       DateTime   @default(now())
+  membership   Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@unique([membershipId, endYmd, daysLeft])
 }
