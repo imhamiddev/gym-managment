@@ -3,6 +3,9 @@ import { redirect } from "next/navigation";
 import { SignJWT, jwtVerify } from "jose";
 import { db } from "./db";
 
+/** How long a login stays valid. Long on purpose: the PWA should open straight into the panel. */
+const SESSION_DAYS = 90;
+
 function secret() {
   const s = process.env.AUTH_SECRET;
   if (!s && process.env.NODE_ENV === "production") throw new Error("AUTH_SECRET is not set");
@@ -13,14 +16,14 @@ export async function createSession(userId: string) {
   const token = await new SignJWT({})
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(userId)
-    .setExpirationTime("30d")
+    .setExpirationTime(`${SESSION_DAYS}d`)
     .sign(secret());
   (await cookies()).set("session", token, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: 60 * 60 * 24 * 30,
+    maxAge: 60 * 60 * 24 * SESSION_DAYS,
   });
 }
 

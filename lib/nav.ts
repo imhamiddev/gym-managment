@@ -8,6 +8,7 @@ export const COACH_LINKS: NavLink[] = [
   { href: "/coach/members", label: "مدیریت اعضا", icon: "members", tone: "members" },
   { href: "/coach/tuition", label: "مدیریت شهریه", icon: "wallet", tone: "tuition" },
   { href: "/coach/attendance", label: "حضور و غیاب", icon: "attendance", tone: "attendance" },
+  { href: "/coach/settings", label: "تنظیمات باشگاه", icon: "setting", tone: "neutral" },
   { href: "/coach/profile", label: "پروفایل", icon: "user", tone: "neutral" },
 ];
 

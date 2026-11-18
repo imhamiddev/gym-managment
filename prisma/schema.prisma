@@ -30,6 +30,12 @@ model Gym {
   coach       User         @relation(fields: [coachId], references: [id], onDelete: Cascade)
   createdAt   DateTime     @default(now())
   memberships Membership[]
+
+  // Weekdays the gym is open, JS numbering: 0 = Sunday ... 6 = Saturday. Default: every day.
+  workDays    Int[]        @default([0, 1, 2, 3, 4, 5, 6])
+  openTime    String       @default("06:00") // HH:MM, Tehran time
+  closeTime   String       @default("22:00") // HH:MM, Tehran time
+  cardNumber  String? // 16 digits, shown to athletes for tuition transfers
 }
 
 // status: "PENDING" | "APPROVED". Each athlete has at most one membership (athleteId is unique)

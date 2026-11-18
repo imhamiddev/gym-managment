@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "./db";
 import { createSession, destroySession, getUser } from "./auth";
 import { isYmd, toEn, ymdToDate } from "./date";
+import { ALL_DAYS, CODE_RE, cleanCard, isGymDay, isTime } from "./gym";
 
 export type FormState = { error?: string; ok?: boolean };
 export type Result = { error?: string };
@@ -98,6 +99,64 @@ export async function createGym(_: FormState, fd: FormData): Promise<FormState> 
     }
   }
   return { error: "ساخت باشگاه انجام نشد. دوباره تلاش کنید." };
+}
+
+export type GymSettingsInput = {
+  name: string;
+  code: string;
+  workDays: number[];
+  openTime: string;
+  closeTime: string;
+  cardNumber: string;
+};
+
+export async function updateGymSettings(input: GymSettingsInput): Promise<Result> {
+  const gym = await coachGym();
+  if (!gym) return { error: DENIED };
+
+  const name = input.name.trim().replace(/\s+/g, " ");
+  if (name.length < 2) return { error: "نام باشگاه را وارد کنید." };
+  if (name.length > 60) return { error: "نام باشگاه بیش از حد طولانی است." };
+
+  const code = toEn(input.code).trim().toUpperCase();
+  if (!CODE_RE.test(code)) return { error: "کد دعوت باید ۴ تا ۶ حرف انگلیسی یا عدد باشد." };
+
+  const workDays = [...new Set(input.workDays)].filter((d) => Number.isInteger(d) && ALL_DAYS.includes(d)).sort((a, b) => a - b);
+  if (!workDays.length) return { error: "حداقل یک روز برای باشگاه انتخاب کنید." };
+
+  if (!isTime(input.openTime) || !isTime(input.closeTime)) return { error: "ساعت شروع و پایان معتبر نیست." };
+  if (input.closeTime <= input.openTime) return { error: "ساعت پایان باید بعد از ساعت شروع باشد." };
+
+  const rawCard = input.cardNumber.trim();
+  let cardNumber: string | null = null;
+  if (rawCard) {
+    cardNumber = cleanCard(rawCard);
+    if (!cardNumber) return { error: "شماره کارت باید ۱۶ رقم باشد." };
+  }
+
+  if (code !== gym.code && (await db.gym.findUnique({ where: { code } }))) {
+    return { error: "این کد دعوت قبلاً استفاده شده است. کد دیگری انتخاب کنید." };
+  }
+
+  try {
+    await db.gym.update({ where: { id: gym.id }, data: { name, code, workDays, openTime: input.openTime, closeTime: input.closeTime, cardNumber } });
+  } catch {
+    return { error: "ذخیره تنظیمات انجام نشد. دوباره تلاش کنید." };
+  }
+  revalidatePath("/coach", "layout");
+  revalidatePath("/athlete", "layout");
+  return {};
+}
+
+/** Picks a fresh random invite code (does not save it; the coach saves with the form). */
+export async function suggestGymCode(): Promise<{ code?: string; error?: string }> {
+  const gym = await coachGym();
+  if (!gym) return { error: DENIED };
+  for (let i = 0; i < 5; i++) {
+    const code = makeCode();
+    if (!(await db.gym.findUnique({ where: { code } }))) return { code };
+  }
+  return { error: "کد جدید ساخته نشد. دوباره تلاش کنید." };
 }
 
 export async function joinGym(_: FormState, fd: FormData): Promise<FormState> {
@@ -199,6 +258,7 @@ export async function saveAttendance(ymd: string, records: { membershipId: strin
   const gym = await coachGym();
   if (!gym) return { error: DENIED };
   if (!isYmd(ymd)) return { error: "تاریخ معتبر نیست." };
+  if (!isGymDay(gym.workDays, ymd)) return { error: "باشگاه در این روز فعال نیست و حضور و غیاب ثبت نمی‌شود." };
 
   const ids = new Set(
     (await db.membership.findMany({ where: { gymId: gym.id, status: "APPROVED" }, select: { id: true } })).map((m) => m.id),

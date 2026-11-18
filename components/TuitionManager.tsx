@@ -1,82 +1,96 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
+import { DurationPicker } from "@/components/DurationPicker";
 import { FormError } from "@/components/FormError";
 import { JalaliField } from "@/components/JalaliField";
+import { RemainingBadge } from "@/components/RemainingBadge";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Dialog, DialogActions } from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/toast";
 import { deletePayment, savePayment } from "@/lib/actions";
 import { formatDays, formatJalali, formatToman, jalaliToYmd, toEn, toFa, ymdAdd, ymdTehran, ymdToJalali } from "@/lib/date";
-import type { PaymentView } from "@/lib/queries";
+import type { MemberView, PaymentView } from "@/lib/queries";
 
-type Form = { id?: string; membershipId: string; amount: string; date: string; duration: string };
+type Form = { id?: string; amount: string; date: string; duration: string };
 
-export function TuitionManager({
-  members,
-  payments,
-}: {
-  members: { id: string; name: string }[];
-  payments: PaymentView[];
-}) {
+const groupDigits = (raw: string) => {
+  const d = toEn(raw).replace(/[^\d]/g, "");
+  return d ? Number(d).toLocaleString("en-US") : "";
+};
+
+export function TuitionManager({ members, payments }: { members: MemberView[]; payments: PaymentView[] }) {
   const toast = useToast();
+  const [q, setQ] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [form, setForm] = useState<Form | null>(null);
-  const [toDelete, setToDelete] = useState<PaymentView | null>(null);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
   const total = payments.reduce((sum, p) => sum + p.amount, 0);
-  const nameParts = (name: string) => {
-    const [first, ...rest] = name.split(" ");
-    return [first ?? "", rest.join(" ")] as const;
-  };
+  const selected = members.find((m) => m.id === selectedId) ?? null;
+  const memberPayments = useMemo(() => payments.filter((p) => p.membershipId === selectedId), [payments, selectedId]);
+  const list = useMemo(() => members.filter((m) => `${m.firstName} ${m.lastName}`.includes(q.trim())), [members, q]);
 
-  const openNew = () => {
+  const blankForm = (m: MemberView): Form => ({
+    amount: m.lastPayment ? String(m.lastPayment.amount) : "",
+    date: ymdToJalali(ymdTehran(new Date())),
+    duration: String(m.lastPayment?.durationDays ?? 30),
+  });
+
+  const openMember = (m: MemberView) => {
     setError(null);
-    setForm({ membershipId: "", amount: "", date: ymdToJalali(ymdTehran(new Date())), duration: "30" });
+    setConfirmId(null);
+    setSelectedId(m.id);
+    setForm(blankForm(m));
   };
-  const openEdit = (p: PaymentView) => {
+  const closeMember = () => {
+    setSelectedId(null);
+    setForm(null);
+    setConfirmId(null);
     setError(null);
-    setForm({ id: p.id, membershipId: p.membershipId, amount: String(p.amount), date: ymdToJalali(p.paidYmd), duration: String(p.durationDays) });
+  };
+  const startEdit = (p: PaymentView) => {
+    setError(null);
+    setConfirmId(null);
+    setForm({ id: p.id, amount: String(p.amount), date: ymdToJalali(p.paidYmd), duration: String(p.durationDays) });
   };
 
   const submit = () =>
     start(async () => {
-      if (!form) return;
+      if (!form || !selected) return;
       const amount = Number(toEn(form.amount).replace(/[^\d]/g, ""));
       const paidYmd = jalaliToYmd(form.date);
-      if (!form.membershipId) return setError("عضو را انتخاب کنید.");
       if (!amount) return setError("مبلغ شهریه را وارد کنید.");
       if (!paidYmd) return setError("تاریخ پرداخت معتبر نیست.");
-      const r = await savePayment({ id: form.id, membershipId: form.membershipId, amount, paidYmd, durationDays: Number(form.duration) });
+      const r = await savePayment({ id: form.id, membershipId: selected.id, amount, paidYmd, durationDays: Number(form.duration) });
       if (r.error) setError(r.error);
       else {
-        toast.success(form.id ? "تغییرات شهریه ذخیره شد" : "شهریه ثبت شد", formatToman(amount));
-        setForm(null);
+        toast.success(form.id ? "تغییرات شهریه ذخیره شد" : "شهریه ثبت شد", `${selected.firstName} ${selected.lastName} · ${formatToman(amount)}`);
+        closeMember();
       }
     });
 
-  const confirmDelete = () =>
+  const remove = (p: PaymentView) =>
     start(async () => {
-      if (!toDelete) return;
-      const r = await deletePayment(toDelete.id);
+      const r = await deletePayment(p.id);
       if (r.error) setError(r.error);
       else {
         toast.success("شهریه حذف شد");
-        setToDelete(null);
+        setConfirmId(null);
+        if (form?.id === p.id && selected) setForm(blankForm(selected));
       }
     });
 
-  const amountDigits = form ? toEn(form.amount).replace(/[^\d]/g, "") : "";
+  const startYmd = form ? jalaliToYmd(form.date) : null;
 
   return (
     <>
@@ -91,166 +105,132 @@ export function TuitionManager({
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-base font-semibold">تاریخچه پرداخت‌ها</h2>
-        <Button onClick={openNew} disabled={members.length === 0} className="bg-tuition text-white hover:bg-tuition/90 dark:text-[#04201e]">
-          <Icon name="plus" size={18} />
-          ثبت شهریه
-        </Button>
+      <div className="flex flex-col gap-3">
+        <h2 className="text-base font-semibold">اعضای باشگاه</h2>
+        {members.length > 0 ? (
+          <Input placeholder="جستجوی نام یا نام خانوادگی" aria-label="جستجوی عضو" value={q} onChange={setQ} leftIcon={<Icon name="search" size={18} />} />
+        ) : null}
       </div>
 
       <Card className="gap-0 overflow-hidden py-0 shadow-card">
-        {payments.length === 0 ? (
-          <EmptyState
-            icon="wallet"
-            tone="tuition"
-            title={members.length ? "هنوز شهریه‌ای ثبت نشده" : "ابتدا یک عضو لازم است"}
-            description={members.length ? "اولین شهریه را ثبت کنید تا روزهای باقی‌مانده هر عضو محاسبه شود." : "حداقل یک ورزشکار را تایید کنید، بعد شهریه ثبت کنید."}
-            action={members.length ? <Button onClick={openNew}>ثبت شهریه</Button> : undefined}
-          />
+        {members.length === 0 ? (
+          <EmptyState icon="wallet" tone="tuition" title="ابتدا یک عضو لازم است" description="حداقل یک ورزشکار را تایید کنید، بعد شهریه ثبت کنید." />
+        ) : list.length === 0 ? (
+          <EmptyState icon="search" tone="tuition" title="عضوی پیدا نشد" description="نام دیگری را جستجو کنید." />
         ) : (
-          <>
-            <div className="hidden grid-cols-[1.4fr_1fr_1fr_1fr_auto] gap-4 border-b border-border bg-card/60 px-5 py-3 text-xs font-medium text-muted-foreground md:grid">
-              <span>عضو</span>
-              <span>مبلغ</span>
-              <span>تاریخ پرداخت</span>
-              <span>پایان اشتراک</span>
-              <span className="w-[84px]" />
-            </div>
-            <ul className="divide-y divide-border">
-              <AnimatePresence initial={false}>
-                {payments.map((p) => {
-                  const [first, last] = nameParts(p.memberName);
-                  return (
-                    <motion.li
-                      key={p.id}
-                      layout="position"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0, x: -24 }}
-                      transition={{ duration: 0.2 }}
-                      className="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-2 px-4 py-4 sm:px-5 md:grid-cols-[1.4fr_1fr_1fr_1fr_auto] md:gap-4"
-                    >
-                      <div className="flex min-w-0 items-center gap-3">
-                        <Avatar name={p.memberName} firstName={first} lastName={last} size="sm" />
-                        <div className="min-w-0">
-                          <p className="truncate font-medium">{p.memberName}</p>
-                          <p className="text-xs text-muted-foreground md:hidden">
-                            <span className="ltr">{formatJalali(p.paidYmd)}</span> ({formatDays(p.durationDays)})
-                          </p>
-                        </div>
-                      </div>
-                      <p className="col-start-1 row-start-2 text-[15px] font-semibold text-tuition md:col-start-auto md:row-start-auto">
-                        {formatToman(p.amount)}
-                      </p>
-                      <p className="hidden text-sm md:block">
-                        {formatJalali(p.paidYmd)}
-                        <Badge className="ms-2 h-6">{formatDays(p.durationDays)}</Badge>
-                      </p>
-                      <p className="hidden text-sm md:block">{formatJalali(ymdAdd(p.paidYmd, p.durationDays))}</p>
-                      <div className="col-start-2 row-span-2 row-start-1 flex items-center gap-1 md:col-start-auto md:row-span-1 md:row-start-auto">
-                        <Button size="icon-sm" variant="ghost" aria-label={`ویرایش شهریه ${p.memberName}`} onClick={() => openEdit(p)}>
-                          <Icon name="edit" size={18} />
-                        </Button>
-                        <Button
-                          size="icon-sm"
-                          variant="ghost"
-                          aria-label={`حذف شهریه ${p.memberName}`}
-                          className="hover:bg-danger/10 hover:text-danger"
-                          onClick={() => {
-                            setError(null);
-                            setToDelete(p);
-                          }}
-                        >
-                          <Icon name="delete" size={18} />
-                        </Button>
-                      </div>
-                    </motion.li>
-                  );
-                })}
-              </AnimatePresence>
-            </ul>
-          </>
+          <ul className="divide-y divide-border">
+            {list.map((m) => {
+              const name = `${m.firstName} ${m.lastName}`;
+              return (
+                <li key={m.id}>
+                  <button
+                    type="button"
+                    onClick={() => openMember(m)}
+                    aria-label={`شهریه ${name}`}
+                    className="group flex w-full items-center gap-3 px-4 py-3.5 text-start transition-colors hover:bg-card/70 active:bg-card sm:px-5"
+                  >
+                    <Avatar name={name} firstName={m.firstName} lastName={m.lastName} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-medium">{name}</span>
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {m.lastPayment ? (
+                          <>
+                            آخرین پرداخت: {formatToman(m.lastPayment.amount)} · <span className="ltr">{formatJalali(m.lastPayment.paidYmd)}</span>
+                          </>
+                        ) : (
+                          "هنوز شهریه‌ای ثبت نشده"
+                        )}
+                      </span>
+                    </span>
+                    <RemainingBadge days={m.remaining} />
+                    <Icon name="chevronLeft" size={18} className="shrink-0 text-muted-foreground transition-transform group-hover:-translate-x-0.5" />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
         )}
       </Card>
 
       <Dialog
-        open={!!form}
-        onOpenChange={(o) => !o && setForm(null)}
-        title={form?.id ? "ویرایش شهریه" : "ثبت شهریه"}
-        description="مبلغ به تومان و تاریخ به شمسی وارد شود."
+        open={!!selected}
+        onOpenChange={(o) => !o && closeMember()}
+        title={selected ? `شهریه ${selected.firstName} ${selected.lastName}` : "شهریه"}
+        description={selected ? (selected.remaining === null ? "هنوز شهریه‌ای ثبت نشده" : selected.remaining === 0 ? "شهریه منقضی شده است" : `${formatDays(selected.remaining)} از شهریه باقی مانده`) : undefined}
         icon="wallet"
         tone="tuition"
       >
-        {form ? (
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <span className="px-1 text-sm font-medium">عضو</span>
-              <Select value={form.membershipId || undefined} onValueChange={(v) => setForm({ ...form, membershipId: v })} disabled={!!form.id}>
-                <div className="relative">
-                  <SelectTrigger className="h-11 text-start">
-                    <SelectValue placeholder="انتخاب عضو" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-56 overflow-y-auto">
-                    {members.map((m) => (
-                      <SelectItem key={m.id} value={m.id}>
-                        {m.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </div>
-              </Select>
-            </div>
-            <Input
-              label="مبلغ (تومان)"
-              dir="ltr"
-              inputMode="numeric"
-              value={amountDigits ? Number(amountDigits).toLocaleString("en-US") : ""}
-              onChange={(v) => setForm({ ...form, amount: v })}
-              placeholder="1,500,000"
-              leftIcon={<Icon name="wallet" size={18} />}
-            />
-            <JalaliField label="تاریخ پرداخت" value={form.date} onChange={(v) => setForm({ ...form, date: v })} />
-            <div className="flex flex-col gap-1.5">
-              <span className="px-1 text-sm font-medium">مدت شهریه</span>
-              <Tabs value={form.duration} onValueChange={(v) => setForm({ ...form, duration: v })} variant="pill">
-                <TabsList aria-label="مدت شهریه" className="w-full [&>*]:flex-1">
-                  <TabsTrigger value="30">۳۰ روز</TabsTrigger>
-                  <TabsTrigger value="60">۶۰ روز</TabsTrigger>
-                  <TabsTrigger value="90">۹۰ روز</TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-            <FormError message={error} />
-            <DialogActions className="mt-1">
-              <Button variant="secondary" onClick={() => setForm(null)}>
-                انصراف
-              </Button>
-              <Button loading={pending} onClick={submit}>
+        {selected && form ? (
+          <div className="flex flex-col gap-5">
+            <section className="flex flex-col gap-4" aria-label={form.id ? "ویرایش شهریه" : "ثبت شهریه جدید"}>
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold">{form.id ? "ویرایش پرداخت" : "ثبت شهریه جدید"}</h3>
+                {form.id ? (
+                  <Button size="sm" variant="ghost" onClick={() => { setForm(blankForm(selected)); setError(null); }}>
+                    لغو ویرایش
+                  </Button>
+                ) : null}
+              </div>
+              <Input
+                label="مبلغ (تومان)"
+                dir="ltr"
+                inputMode="numeric"
+                value={groupDigits(form.amount)}
+                onChange={(v) => setForm({ ...form, amount: v })}
+                placeholder="1,500,000"
+                leftIcon={<Icon name="wallet" size={18} />}
+              />
+              <JalaliField label="تاریخ پرداخت" value={form.date} onChange={(v) => setForm({ ...form, date: v })} />
+              <div className="flex flex-col gap-1.5">
+                <span className="px-1 text-sm font-medium">مدت شهریه</span>
+                <DurationPicker value={form.duration} onChange={(v) => setForm({ ...form, duration: v })} startYmd={startYmd} />
+              </div>
+              <FormError message={error} />
+              <Button loading={pending} onClick={submit} className="w-full">
                 {form.id ? "ذخیره تغییرات" : "ثبت شهریه"}
               </Button>
-            </DialogActions>
+            </section>
+
+            <section className="flex flex-col gap-2" aria-label="تاریخچه پرداخت‌ها">
+              <h3 className="text-sm font-semibold">تاریخچه پرداخت‌ها</h3>
+              {memberPayments.length === 0 ? (
+                <p className="rounded-2xl bg-card px-4 py-5 text-center text-sm text-muted-foreground">برای این عضو پرداختی ثبت نشده است.</p>
+              ) : (
+                <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border">
+                  <AnimatePresence initial={false}>
+                    {memberPayments.map((p) => (
+                      <motion.li key={p.id} layout="position" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, x: -24 }} transition={{ duration: 0.2 }} className="px-3.5 py-3">
+                        {confirmId === p.id ? (
+                          <div className="flex items-center gap-2">
+                            <span className="flex-1 text-sm">این پرداخت حذف شود؟</span>
+                            <Button size="sm" variant="secondary" onClick={() => setConfirmId(null)}>خیر</Button>
+                            <Button size="sm" variant="danger" loading={pending} onClick={() => remove(p)}>حذف</Button>
+                          </div>
+                        ) : (
+                          <div className={`flex items-center gap-2 ${form.id === p.id ? "opacity-60" : ""}`}>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[15px] font-semibold text-tuition">{formatToman(p.amount)}</p>
+                              <p className="text-xs text-muted-foreground">
+                                <span className="ltr">{formatJalali(p.paidYmd)}</span> تا <span className="ltr">{formatJalali(ymdAdd(p.paidYmd, p.durationDays))}</span>
+                              </p>
+                            </div>
+                            <Badge>{formatDays(p.durationDays)}</Badge>
+                            <Button size="icon-sm" variant="ghost" aria-label="ویرایش پرداخت" onClick={() => startEdit(p)}>
+                              <Icon name="edit" size={18} />
+                            </Button>
+                            <Button size="icon-sm" variant="ghost" aria-label="حذف پرداخت" className="hover:bg-danger/10 hover:text-danger" onClick={() => { setError(null); setConfirmId(p.id); }}>
+                              <Icon name="delete" size={18} />
+                            </Button>
+                          </div>
+                        )}
+                      </motion.li>
+                    ))}
+                  </AnimatePresence>
+                </ul>
+              )}
+            </section>
           </div>
         ) : null}
-      </Dialog>
-
-      <Dialog
-        open={!!toDelete}
-        onOpenChange={(o) => !o && setToDelete(null)}
-        title="حذف این شهریه؟"
-        description={toDelete ? `${toDelete.memberName}، ${formatToman(toDelete.amount)}. روزهای باقی‌مانده عضو دوباره حساب می‌شود.` : ""}
-        icon="danger"
-        tone="danger"
-      >
-        <FormError message={error} />
-        <DialogActions className="mt-2">
-          <Button variant="secondary" onClick={() => setToDelete(null)}>
-            انصراف
-          </Button>
-          <Button variant="danger" loading={pending} onClick={confirmDelete}>
-            حذف شهریه
-          </Button>
-        </DialogActions>
       </Dialog>
     </>
   );
