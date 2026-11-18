@@ -1,3 +1,4 @@
+import { CardNumberCard } from "@/components/CardNumberCard";
 import { CancelRequestButton, JoinGymForm } from "@/components/GymSetup";
 import { RemainingBadge } from "@/components/RemainingBadge";
 import { StatCard } from "@/components/StatCard";
@@ -9,6 +10,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { requireUser } from "@/lib/auth";
 import { formatDays, formatJalali, formatToman, remainingDays, ymdAdd, ymdTehran } from "@/lib/date";
 import { db } from "@/lib/db";
+import { describeDays, formatHours } from "@/lib/gym";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "پنل من" };
@@ -66,6 +68,11 @@ export default async function AthletePage() {
     <>
       <PageHeader title={m.gym.name} description={`مربی: ${m.gym.coach.firstName} ${m.gym.coach.lastName}`} icon="home" />
 
+      <p className="-mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+        <Icon name="time" size={16} className="shrink-0" />
+        {describeDays(m.gym.workDays)}، ساعت {formatHours(m.gym.openTime, m.gym.closeTime)}
+      </p>
+
       <section className="rounded-[28px] border border-border bg-background p-5 shadow-card sm:p-6">
         <div className="flex items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground">شهریه باقی‌مانده</p>
@@ -78,6 +85,8 @@ export default async function AthletePage() {
           <div className={cn("h-full origin-right rounded-full transition-transform duration-700", tone)} style={{ transform: `scaleX(${ratio})` }} />
         </div>
       </section>
+
+      {m.gym.cardNumber ? <CardNumberCard card={m.gym.cardNumber} /> : null}
 
       <section className="grid grid-cols-2 gap-3" aria-label="آمار">
         <StatCard icon="attendance" tone="attendance" label="حضور در ۳۰ روز اخیر" value={present} />

@@ -53,3 +53,6 @@ export function remainingDays(payments: { paidYmd: string; durationDays: number 
   const end = Math.max(...payments.map((p) => dayNum(p.paidYmd) + p.durationDays));
   return Math.max(0, end - dayNum(todayYmd));
 }
+
+/** Weekday of a Gregorian YYYY-MM-DD: 0 = Sunday ... 6 = Saturday. */
+export const weekdayOf = (ymd: string) => (((dayNum(ymd) + 4) % 7) + 7) % 7;
