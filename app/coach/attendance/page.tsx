@@ -20,10 +20,11 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
 
   return (
     <>
-      <PageHeader title="حضور و غیاب" description="برای هر جلسه حاضر و غایب را علامت بزنید" icon="attendance" tone="attendance" />
+      <PageHeader title="حضور و غیاب" description="فقط در روزهای فعال باشگاه قابل ثبت است" icon="attendance" tone="attendance" />
       <AttendanceBoard
         key={ymd}
         ymd={ymd}
+        workDays={gym.workDays}
         members={members.map((m) => ({ id: m.id, name: `${m.firstName} ${m.lastName}`, firstName: m.firstName, lastName: m.lastName }))}
         initial={initial}
       />
