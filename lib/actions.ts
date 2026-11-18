@@ -8,7 +8,7 @@ import { createSession, destroySession, getUser } from "./auth";
 import { isYmd, minutesTehran, timeToMinutes, toEn, ymdTehran, ymdToDate } from "./date";
 import { findCoachGym } from "./coach";
 import { safeNext } from "./redirect";
-import { verifyCheckinToken } from "./checkin";
+import { newCheckinToken, tokensMatch } from "./checkin";
 import { ALL_DAYS, CODE_RE, cleanCard, isGymDay, isTime } from "./gym";
 
 export type FormState = { error?: string; ok?: boolean };
@@ -395,6 +395,16 @@ export async function updateMemberProfile(input: MemberProfileInput): Promise<Re
   return {};
 }
 
+/** Owner only: invalidates the printed QR and creates a new one (old posters stop working). */
+export async function regenerateCheckinToken(): Promise<Result> {
+  const gym = await ownerGym();
+  if (!gym) return { error: DENIED };
+  await db.gym.update({ where: { id: gym.id }, data: { checkinToken: newCheckinToken() } });
+  revalidatePath("/coach", "layout");
+  revalidatePath("/qr-print");
+  return {};
+}
+
 /* ---------- self check-in (athlete scans the gym's daily QR) ---------- */
 
 export async function checkIn(gymId: string, token: string): Promise<{ error?: string; ok?: boolean }> {
@@ -405,7 +415,7 @@ export async function checkIn(gymId: string, token: string): Promise<{ error?: s
 
   const now = new Date();
   const today = ymdTehran(now);
-  if (!verifyCheckinToken(gymId, today, token)) return { error: "این QR منقضی شده است. QR امروز را از مربی بگیرید." };
+  if (!tokensMatch(m.gym.checkinToken, token)) return { error: "این QR دیگر معتبر نیست. QR جدید را از مربی بگیرید." };
   if (!isGymDay(m.gym.workDays, today)) return { error: "باشگاه امروز فعال نیست." };
   const minutes = minutesTehran(now);
   if (minutes < timeToMinutes(m.gym.openTime) - 30 || minutes > timeToMinutes(m.gym.closeTime) + 30) {

@@ -1,17 +1,11 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { randomBytes, timingSafeEqual } from "node:crypto";
 
-function key() {
-  const s = process.env.AUTH_SECRET;
-  if (!s && process.env.NODE_ENV === "production") throw new Error("AUTH_SECRET is not set");
-  return s ?? "dev-only-secret-change-me-in-env-file";
-}
+/** A fresh secret for the gym's printed check-in QR. */
+export const newCheckinToken = () => randomBytes(18).toString("base64url");
 
-/** Daily check-in token for a gym: the QR on the wall changes every Tehran day. */
-export const checkinToken = (gymId: string, ymd: string) =>
-  createHmac("sha256", key()).update(`checkin:${gymId}:${ymd}`).digest("base64url").slice(0, 22);
-
-export function verifyCheckinToken(gymId: string, ymd: string, token: string) {
-  const a = Buffer.from(checkinToken(gymId, ymd));
-  const b = Buffer.from(token);
+export function tokensMatch(expected: string | null | undefined, given: string) {
+  if (!expected) return false;
+  const a = Buffer.from(expected);
+  const b = Buffer.from(given);
   return a.length === b.length && timingSafeEqual(a, b);
 }
