@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { HeroDemo } from "@/components/landing/HeroDemo";
 import { ButtonLink } from "@/components/ui/button";
 import { Icon, type IconName } from "@/components/ui/icon";
@@ -24,7 +25,8 @@ const ghost = "inline-flex h-9 items-center rounded-full px-4 text-[13px] font-m
 
 export default async function Landing() {
   const user = await getUser();
-  const panel = user ? (user.role === "COACH" ? "/coach" : "/athlete") : null;
+  // Already signed in (PWA launch or a link to the site): go straight to the panel.
+  if (user) redirect(user.role === "COACH" ? "/coach" : "/athlete");
 
   return (
     <div>
@@ -33,14 +35,8 @@ export default async function Landing() {
           <Brand />
           <div className="flex items-center gap-1.5">
             <ThemeToggle variant="circle" start="top-left" className="size-10 rounded-full text-muted-foreground transition-colors hover:bg-card hover:text-foreground active:scale-90" />
-            {panel ? (
-              <ButtonLink href={panel} size="sm">ورود به پنل</ButtonLink>
-            ) : (
-              <>
-                <Link href="/login" className={ghost}>ورود</Link>
-                <ButtonLink href="/register" size="sm">ثبت‌نام</ButtonLink>
-              </>
-            )}
+            <Link href="/login" className={ghost}>ورود</Link>
+            <ButtonLink href="/register" size="sm">ثبت‌نام</ButtonLink>
           </div>
         </div>
       </header>
