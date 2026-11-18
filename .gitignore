@@ -4,3 +4,4 @@ node_modules
 prisma/*.db
 prisma/*.db-journal
 components/arc
+tsconfig.tsbuildinfo
