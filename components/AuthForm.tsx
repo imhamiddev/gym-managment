@@ -12,7 +12,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { login, register, type FormState } from "@/lib/actions";
 
-export function AuthForm({ mode, initialRole = "ATHLETE" }: { mode: "login" | "register"; initialRole?: string }) {
+export function AuthForm({ mode, initialRole = "ATHLETE", next }: { mode: "login" | "register"; initialRole?: string; next?: string }) {
   const isRegister = mode === "register";
   const [state, action, pending] = useActionState<FormState, FormData>(isRegister ? register : login, {});
   const [role, setRole] = useState(initialRole);
@@ -33,6 +33,7 @@ export function AuthForm({ mode, initialRole = "ATHLETE" }: { mode: "login" | "r
           </p>
 
           <form action={action} className="flex flex-col gap-4">
+            {next ? <input type="hidden" name="next" value={next} /> : null}
             {isRegister ? (
               <>
                 <div className="flex flex-col gap-1.5">

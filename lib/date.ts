@@ -56,3 +56,35 @@ export function remainingDays(payments: { paidYmd: string; durationDays: number 
 
 /** Weekday of a Gregorian YYYY-MM-DD: 0 = Sunday ... 6 = Saturday. */
 export const weekdayOf = (ymd: string) => (((dayNum(ymd) + 4) % 7) + 7) % 7;
+
+/** Current time in Tehran as minutes since midnight. */
+export function minutesTehran(d: Date) {
+  const [h, m] = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Tehran", hour: "2-digit", minute: "2-digit", hour12: false })
+    .format(d)
+    .split(":")
+    .map(Number);
+  return (h % 24) * 60 + m;
+}
+
+/** "HH:MM" -> minutes since midnight. */
+export const timeToMinutes = (t: string) => {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+};
+
+/** True when the Jalali month/day of `birthYmd` matches `todayYmd`. */
+export function isBirthday(birthYmd: string | null, todayYmd: string) {
+  if (!birthYmd) return false;
+  const [by, bm, bd] = birthYmd.split("-").map(Number);
+  const [ty, tm, td] = todayYmd.split("-").map(Number);
+  const b = jalaali.toJalaali(by, bm, bd);
+  const t = jalaali.toJalaali(ty, tm, td);
+  return b.jm === t.jm && b.jd === t.jd;
+}
+
+/** Full years between a Gregorian birth date and today. */
+export function ageOn(birthYmd: string, todayYmd: string) {
+  const b = jalaali.toJalaali(...(birthYmd.split("-").map(Number) as [number, number, number]));
+  const t = jalaali.toJalaali(...(todayYmd.split("-").map(Number) as [number, number, number]));
+  return t.jy - b.jy - (t.jm < b.jm || (t.jm === b.jm && t.jd < b.jd) ? 1 : 0);
+}

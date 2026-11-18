@@ -5,6 +5,7 @@ import { useMemo, useState, useTransition } from "react";
 import { DurationPicker } from "@/components/DurationPicker";
 import { FormError } from "@/components/FormError";
 import { JalaliField } from "@/components/JalaliField";
+import type { PlanView } from "@/components/PlansCard";
 import { RemainingBadge } from "@/components/RemainingBadge";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +27,7 @@ const groupDigits = (raw: string) => {
   return d ? Number(d).toLocaleString("en-US") : "";
 };
 
-export function TuitionManager({ members, payments }: { members: MemberView[]; payments: PaymentView[] }) {
+export function TuitionManager({ members, payments, plans }: { members: MemberView[]; payments: PaymentView[]; plans: PlanView[] }) {
   const toast = useToast();
   const [q, setQ] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -171,6 +172,28 @@ export function TuitionManager({ members, payments }: { members: MemberView[]; p
                   </Button>
                 ) : null}
               </div>
+              {plans.length ? (
+                <div className="flex flex-col gap-1.5">
+                  <span className="px-1 text-sm font-medium">پلن آماده</span>
+                  <div className="-mx-1 flex flex-wrap gap-2 px-1" role="group" aria-label="پلن‌های شهریه">
+                    {plans.map((p) => {
+                      const on = form.amount === String(p.amount) && form.duration === String(p.durationDays);
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          aria-pressed={on}
+                          onClick={() => setForm({ ...form, amount: String(p.amount), duration: String(p.durationDays) })}
+                          className={`flex flex-col items-start rounded-2xl border px-3.5 py-2 text-start transition-[background-color,border-color,transform] active:scale-95 ${on ? "border-tuition bg-tuition/10" : "border-border bg-card hover:border-border-strong"}`}
+                        >
+                          <span className="text-sm font-semibold leading-6">{p.name}</span>
+                          <span className="text-[11px] leading-5 text-muted-foreground">{formatToman(p.amount)} · {formatDays(p.durationDays)}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
               <Input
                 label="مبلغ (تومان)"
                 dir="ltr"

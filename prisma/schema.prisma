@@ -19,6 +19,7 @@ model User {
   gym          Gym?
   membership   Membership?
   pushSubscriptions PushSubscription[]
+  coachOf      GymCoach? // assistant coach in someone else's gym (the owner is Gym.coachId)
 }
 
 // Each coach owns at most one gym (coachId is unique)
@@ -30,6 +31,8 @@ model Gym {
   coach       User         @relation(fields: [coachId], references: [id], onDelete: Cascade)
   createdAt   DateTime     @default(now())
   memberships Membership[]
+  plans       Plan[]
+  coaches     GymCoach[] // assistant coaches (the owner is `coach`)
 
   // Weekdays the gym is open, JS numbering: 0 = Sunday ... 6 = Saturday. Default: every day.
   workDays    Int[]        @default([0, 1, 2, 3, 4, 5, 6])
@@ -48,6 +51,14 @@ model Membership {
   approvedAt  DateTime?
   gym         Gym          @relation(fields: [gymId], references: [id], onDelete: Cascade)
   athlete     User         @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+
+  // Coach-managed profile
+  heightCm    Int?
+  weightKg    Float?
+  goal        String? // shown to the athlete
+  program     String? // training program, shown to the athlete
+  notes       String? // private coach notes
+  birthYmd    String? // Gregorian YYYY-MM-DD
   payments    Payment[]
   attendances Attendance[]
   reminders   ReminderLog[]
@@ -100,4 +111,29 @@ model ReminderLog {
   membership   Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
 
   @@unique([membershipId, endYmd, daysLeft])
+}
+
+// Ready-made tuition plans a coach defines once and picks when recording a payment
+model Plan {
+  id           String   @id @default(cuid())
+  gymId        String
+  name         String
+  amount       Int // toman
+  durationDays Int // 30 | 60 | 90
+  createdAt    DateTime @default(now())
+  gym          Gym      @relation(fields: [gymId], references: [id], onDelete: Cascade)
+
+  @@index([gymId])
+}
+
+// An assistant coach. A coach user belongs to at most one gym (as owner or assistant).
+model GymCoach {
+  id        String   @id @default(cuid())
+  gymId     String
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  gym       Gym      @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([gymId])
 }

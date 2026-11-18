@@ -6,8 +6,8 @@ import { Card } from "@/components/ui/card";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireUser } from "@/lib/auth";
-import { toFa } from "@/lib/date";
-import { db } from "@/lib/db";
+import { isBirthday, toFa, ymdTehran } from "@/lib/date";
+import { findCoachGym } from "@/lib/coach";
 import { loadMembers, loadPending } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
@@ -21,7 +21,7 @@ const QUICK: { href: string; icon: IconName; tone: Tone; label: string; hint: st
 
 export default async function CoachHome() {
   const user = await requireUser("COACH");
-  const gym = await db.gym.findUnique({ where: { coachId: user.id } });
+  const gym = (await findCoachGym(user.id))?.gym ?? null;
   if (!gym) {
     return (
       <>
@@ -35,6 +35,7 @@ export default async function CoachHome() {
   const active = members.filter((m) => (m.remaining ?? 0) > 7).length;
   const expiring = members.filter((m) => m.remaining !== null && m.remaining > 0 && m.remaining <= 7).length;
   const expired = members.filter((m) => !m.remaining).length;
+  const birthdays = members.filter((m) => isBirthday(m.birthYmd, ymdTehran(new Date())));
 
   return (
     <>
@@ -52,6 +53,13 @@ export default async function CoachHome() {
         </div>
         <CodeCopy code={gym.code} />
       </section>
+
+      {birthdays.length ? (
+        <section className="flex items-center gap-3 rounded-3xl border border-attendance/25 bg-attendance/10 p-4" role="status">
+          <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-attendance/15 text-attendance"><Icon name="star" size={22} set="bulk" /></span>
+          <p className="leading-7"><span className="block font-semibold">تولد امروز</span><span className="block text-sm text-muted-foreground">{birthdays.map((b) => `${b.firstName} ${b.lastName}`).join("، ")}</span></p>
+        </section>
+      ) : null}
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="آمار">
         <StatCard icon="members" tone="members" label="عضو" value={members.length} />

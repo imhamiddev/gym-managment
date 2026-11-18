@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Icon } from "@/components/ui/icon";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireUser } from "@/lib/auth";
-import { formatDays, formatJalali, formatToman, remainingDays, ymdAdd, ymdTehran } from "@/lib/date";
+import { formatDays, formatJalali, formatToman, isBirthday, remainingDays, toFa, ymdAdd, ymdTehran } from "@/lib/date";
 import { db } from "@/lib/db";
 import { describeDays, formatHours } from "@/lib/gym";
 import { cn } from "@/lib/utils";
@@ -86,12 +86,36 @@ export default async function AthletePage() {
         </div>
       </section>
 
+      {isBirthday(m.birthYmd, today) ? (
+        <section className="flex items-center gap-3 rounded-[28px] border border-attendance/25 bg-attendance/10 p-4" role="status">
+          <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-attendance/15 text-attendance"><Icon name="star" size={22} set="bulk" /></span>
+          <p className="leading-7"><span className="block font-semibold">تولدت مبارک، {user.firstName}!</span><span className="block text-sm text-muted-foreground">از طرف {m.gym.name}</span></p>
+        </section>
+      ) : null}
+
       {m.gym.cardNumber ? <CardNumberCard card={m.gym.cardNumber} /> : null}
 
       <section className="grid grid-cols-2 gap-3" aria-label="آمار">
         <StatCard icon="attendance" tone="attendance" label="حضور در ۳۰ روز اخیر" value={present} />
         <StatCard icon="wallet" tone="tuition" label="پرداخت ثبت‌شده" value={payments.length} />
       </section>
+
+      {m.goal || m.program || m.heightCm || m.weightKg ? (
+        <section className="flex flex-col gap-3" aria-label="برنامه من">
+          <h2 className="text-base font-semibold">برنامه و مشخصات من</h2>
+          <Card className="gap-3 p-5 shadow-card">
+            {m.heightCm || m.weightKg ? (
+              <p className="text-sm text-muted-foreground">
+                {m.heightCm ? `قد: ${toFa(m.heightCm)} سانتی‌متر` : null}
+                {m.heightCm && m.weightKg ? " · " : null}
+                {m.weightKg ? `وزن: ${toFa(m.weightKg)} کیلوگرم` : null}
+              </p>
+            ) : null}
+            {m.goal ? <p className="font-medium">هدف: {m.goal}</p> : null}
+            {m.program ? <p className="whitespace-pre-wrap leading-8">{m.program}</p> : null}
+          </Card>
+        </section>
+      ) : null}
 
       <section className="flex flex-col gap-3">
         <h2 className="text-base font-semibold">تاریخچه شهریه</h2>

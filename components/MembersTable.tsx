@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useMemo, useState, useTransition } from "react";
 import { FormError } from "@/components/FormError";
+import { MemberProfileSection } from "@/components/MemberProfileSection";
 import { RemainingBadge } from "@/components/RemainingBadge";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -11,10 +12,11 @@ import { Dialog, DialogActions } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/toast";
 import { removeMember } from "@/lib/actions";
-import { formatDays, formatJalali, formatToman, toFa } from "@/lib/date";
+import { formatDays, formatJalali, formatToman, isBirthday, toFa, ymdTehran } from "@/lib/date";
 import type { MemberView } from "@/lib/queries";
 
 type Filter = "all" | "active" | "expiring" | "expired";
@@ -39,7 +41,10 @@ function DetailRow({ icon, label, children }: { icon: IconName; label: string; c
 
 export function MembersTable({ members }: { members: MemberView[] }) {
   const toast = useToast();
-  const [selected, setSelected] = useState<MemberView | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Read from props so edits (e.g. the profile) show up right after they are saved.
+  const selected = members.find((m) => m.id === selectedId) ?? null;
+  const today = ymdTehran(new Date());
   const [open, setOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +58,7 @@ export function MembersTable({ members }: { members: MemberView[] }) {
   );
 
   const show = (m: MemberView) => {
-    setSelected(m);
+    setSelectedId(m.id);
     setConfirming(false);
     setError(null);
     setOpen(true);
@@ -61,11 +66,12 @@ export function MembersTable({ members }: { members: MemberView[] }) {
   const remove = () =>
     start(async () => {
       if (!selected) return;
+      const name = `${selected.firstName} ${selected.lastName}`;
       const r = await removeMember(selected.id);
       if (r.error) setError(r.error);
       else {
         setOpen(false);
-        toast.success("عضو از باشگاه حذف شد", `${selected.firstName} ${selected.lastName}`);
+        toast.success("عضو از باشگاه حذف شد", name);
       }
     });
 
@@ -128,6 +134,7 @@ export function MembersTable({ members }: { members: MemberView[] }) {
                       </span>
                       <span className="ltr text-xs text-muted-foreground">{m.phone}</span>
                     </span>
+                    {isBirthday(m.birthYmd, today) ? <Badge tone="attendance">تولد امروز</Badge> : null}
                     <RemainingBadge days={m.remaining} />
                     <Icon
                       name="chevronLeft"
@@ -175,6 +182,7 @@ export function MembersTable({ members }: { members: MemberView[] }) {
               </DetailRow>
               <DetailRow icon="attendance" label="حضور در ۳۰ روز اخیر">{toFa(selected.presentLast30)} جلسه</DetailRow>
             </dl>
+            <MemberProfileSection key={selected.id} member={selected} />
             <div className="mt-3">
               <FormError message={error} />
             </div>

@@ -3,6 +3,8 @@ import { requireGym } from "@/lib/coach";
 import { loadMembers } from "@/lib/queries";
 import { isYmd, ymdTehran } from "@/lib/date";
 import { AttendanceBoard } from "@/components/AttendanceBoard";
+import { ButtonLink } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { PageHeader } from "@/components/ui/page-header";
 
 export const metadata = { title: "حضور و غیاب" };
@@ -20,7 +22,15 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
 
   return (
     <>
-      <PageHeader title="حضور و غیاب" description="فقط در روزهای فعال باشگاه قابل ثبت است" icon="attendance" tone="attendance" />
+      <PageHeader title="حضور و غیاب" description="فقط در روزهای فعال باشگاه قابل ثبت است" icon="attendance"
+        tone="attendance"
+        actions={
+          <ButtonLink href="/coach/attendance/qr" variant="soft" size="sm">
+            <Icon name="ticket" size={16} />
+            QR حضور
+          </ButtonLink>
+        }
+      />
       <AttendanceBoard
         key={ymd}
         ymd={ymd}
