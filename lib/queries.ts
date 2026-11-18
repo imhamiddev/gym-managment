@@ -10,6 +10,12 @@ export type MemberView = {
   remaining: number | null;
   lastPayment: { amount: number; paidYmd: string; durationDays: number } | null;
   presentLast30: number;
+  heightCm: number | null;
+  weightKg: number | null;
+  goal: string | null;
+  program: string | null;
+  notes: string | null;
+  birthYmd: string | null;
 };
 
 export type PaymentView = {
@@ -46,6 +52,12 @@ export async function loadMembers(gymId: string): Promise<MemberView[]> {
       remaining: remainingDays(payments, today),
       lastPayment: payments[0] ?? null,
       presentLast30: m.attendances.length,
+      heightCm: m.heightCm,
+      weightKg: m.weightKg,
+      goal: m.goal,
+      program: m.program,
+      notes: m.notes,
+      birthYmd: m.birthYmd,
     };
   });
 }

@@ -2,6 +2,7 @@ import { InstallCard, NotificationsCard } from "@/components/AppSettings";
 import { ProfileForm } from "@/components/ProfileForm";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireUser } from "@/lib/auth";
+import { findCoachGym } from "@/lib/coach";
 import { db } from "@/lib/db";
 import { formatJalali, ymdTehran } from "@/lib/date";
 
@@ -10,7 +11,7 @@ export async function ProfilePage({ role }: { role: "COACH" | "ATHLETE" }) {
   let gymLabel: string | null = null;
   let gymValue: string | null = null;
   if (role === "COACH") {
-    const gym = await db.gym.findUnique({ where: { coachId: user.id } });
+    const gym = (await findCoachGym(user.id))?.gym;
     if (gym) { gymLabel = "باشگاه"; gymValue = gym.name; }
   } else {
     const m = await db.membership.findUnique({ where: { athleteId: user.id }, include: { gym: true } });

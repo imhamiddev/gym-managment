@@ -7,7 +7,7 @@ import { Icon, type IconName } from "@/components/ui/icon";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireUser } from "@/lib/auth";
 import { toFa } from "@/lib/date";
-import { db } from "@/lib/db";
+import { findCoachGym } from "@/lib/coach";
 import { loadMembers, loadPending } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
@@ -21,7 +21,7 @@ const QUICK: { href: string; icon: IconName; tone: Tone; label: string; hint: st
 
 export default async function CoachHome() {
   const user = await requireUser("COACH");
-  const gym = await db.gym.findUnique({ where: { coachId: user.id } });
+  const gym = (await findCoachGym(user.id))?.gym ?? null;
   if (!gym) {
     return (
       <>
