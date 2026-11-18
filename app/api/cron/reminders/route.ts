@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { dayNum, formatDays, toFa, ymdAdd, ymdTehran } from "@/lib/date";
+import { dayNum, formatDays, isBirthday, toFa, ymdAdd, ymdTehran } from "@/lib/date";
 import { db } from "@/lib/db";
 import { pushReady, sendPushToUser } from "@/lib/push";
 
@@ -47,5 +47,28 @@ export async function GET(req: Request) {
     if (n === 0) await db.reminderLog.deleteMany({ where: { membershipId: m.id, endYmd, daysLeft } }); // allow a retry
     sent += n;
   }
-  return NextResponse.json({ ok: true, day: today, checked: members.length, sent });
+
+  // Birthday greetings (one per member per day; reuses ReminderLog with daysLeft = -100).
+  const birthdayMembers = await db.membership.findMany({
+    where: { status: "APPROVED", birthYmd: { not: null }, athlete: { pushSubscriptions: { some: {} } } },
+    include: { gym: true, athlete: true },
+  });
+  let greeted = 0;
+  for (const m of birthdayMembers) {
+    if (!isBirthday(m.birthYmd, today)) continue;
+    try {
+      await db.reminderLog.create({ data: { membershipId: m.id, endYmd: today, daysLeft: -100 } });
+    } catch {
+      continue;
+    }
+    const n = await sendPushToUser(m.athleteId, {
+      title: `تولدت مبارک ${m.athlete.firstName}!`,
+      body: `«${m.gym.name}» تولدت را تبریک می‌گوید. روز خوبی داشته باشی!`,
+      url: "/athlete",
+      tag: "birthday",
+    });
+    if (n === 0) await db.reminderLog.deleteMany({ where: { membershipId: m.id, endYmd: today, daysLeft: -100 } });
+    greeted += n;
+  }
+  return NextResponse.json({ ok: true, day: today, checked: members.length, sent, greeted });
 }
