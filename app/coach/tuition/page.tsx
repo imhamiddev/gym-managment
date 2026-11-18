@@ -10,8 +10,8 @@ export default async function TuitionPage() {
   const [members, payments] = await Promise.all([loadMembers(gym.id), loadPayments(gym.id)]);
   return (
     <>
-      <PageHeader title="مدیریت شهریه" description="ثبت و ویرایش پرداخت‌های اعضا" icon="wallet" tone="tuition" />
-      <TuitionManager members={members.map((m) => ({ id: m.id, name: `${m.firstName} ${m.lastName}` }))} payments={payments} />
+      <PageHeader title="مدیریت شهریه" description="روی هر عضو بزنید تا شهریه‌اش را ثبت یا ویرایش کنید" icon="wallet" tone="tuition" />
+      <TuitionManager members={members} payments={payments} />
     </>
   );
 }
