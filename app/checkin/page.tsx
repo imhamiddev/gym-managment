@@ -4,8 +4,7 @@ import { CheckInButton } from "@/components/CheckInButton";
 import { Card } from "@/components/ui/card";
 import { Brand } from "@/components/ui/logo";
 import { getUser } from "@/lib/auth";
-import { verifyCheckinToken } from "@/lib/checkin";
-import { ymdTehran } from "@/lib/date";
+import { tokensMatch } from "@/lib/checkin";
 import { db } from "@/lib/db";
 
 export const metadata = { title: "ثبت حضور" };
@@ -43,10 +42,10 @@ export default async function CheckinPage({ searchParams }: { searchParams: Prom
       </Shell>
     );
   }
-  if (!verifyCheckinToken(g, ymdTehran(new Date()), t)) {
+  if (!tokensMatch(m.gym.checkinToken, t)) {
     return (
       <Shell>
-        <p className="leading-8">این QR منقضی شده یا معتبر نیست. QR امروز را از مربی بگیرید و دوباره اسکن کنید.</p>
+        <p className="leading-8">این QR دیگر معتبر نیست. QR جدید را از مربی بگیرید و دوباره اسکن کنید.</p>
         <Link href="/athlete" className="text-sm font-medium text-primary hover:underline">رفتن به پنل من</Link>
       </Shell>
     );

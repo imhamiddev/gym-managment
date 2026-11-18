@@ -39,6 +39,7 @@ model Gym {
   openTime    String       @default("06:00") // HH:MM, Tehran time
   closeTime   String       @default("22:00") // HH:MM, Tehran time
   cardNumber  String? // 16 digits, shown to athletes for tuition transfers
+  checkinToken String? // secret inside the printed check-in QR; stays until the owner regenerates it
 }
 
 // status: "PENDING" | "APPROVED". Each athlete has at most one membership (athleteId is unique)
