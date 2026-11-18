@@ -7,6 +7,7 @@ import { db } from "./db";
 import { createSession, destroySession, getUser } from "./auth";
 import { isYmd, minutesTehran, timeToMinutes, toEn, ymdTehran, ymdToDate } from "./date";
 import { findCoachGym } from "./coach";
+import { safeNext } from "./redirect";
 import { verifyCheckinToken } from "./checkin";
 import { ALL_DAYS, CODE_RE, cleanCard, isGymDay, isTime } from "./gym";
 
@@ -47,10 +48,7 @@ export async function login(_: FormState, fd: FormData): Promise<FormState> {
     return { error: "شماره تلفن یا رمز عبور درست نیست." };
   }
   await createSession(user.id);
-  const next = String(fd.get("next") ?? "");
-  // Only same-site paths: "/checkin?..." yes, "//evil.com" or "https://..." no.
-  const safeNext = next.startsWith("/") && !next.startsWith("//") && !next.includes("\\") ? next : null;
-  redirect(safeNext ?? (user.role === "COACH" ? "/coach" : "/athlete"));
+  redirect(safeNext(String(fd.get("next") ?? "")) ?? (user.role === "COACH" ? "/coach" : "/athlete"));
 }
 
 export async function updateProfile(_: FormState, fd: FormData): Promise<FormState> {
