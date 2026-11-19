@@ -9,7 +9,7 @@ export const metadata = { title: "چاپ QR حضور" };
 export const dynamic = "force-dynamic";
 
 /** Shell-free print page for the gym's check-in QR, with a black-and-white and a colour poster. */
-export default async function QrPrintPage({ searchParams }: { searchParams: Promise<{ v?: string }> }) {
+export default async function QrPrintPage({ searchParams }: { searchParams: Promise<{ v?: string; s?: string }> }) {
   const user = await requireUser("COACH");
   const found = await findCoachGym(user.id);
   if (!found) redirect("/coach");
@@ -28,6 +28,14 @@ export default async function QrPrintPage({ searchParams }: { searchParams: Prom
     QRCode.toString(url, { ...base, color: { dark: "#0a3f8f", light: "#ffffff" } }),
   ]);
 
-  const { v } = await searchParams;
-  return <QrPoster gymName={gym.name} svgBw={svgBw} svgColor={svgColor} initialMode={v === "bw" ? "bw" : "color"} />;
+  const { v, s } = await searchParams;
+  return (
+    <QrPoster
+      gymName={gym.name}
+      svgBw={svgBw}
+      svgColor={svgColor}
+      initialMode={v === "bw" ? "bw" : "color"}
+      initialSize={s === "a5" ? "a5" : "a4"}
+    />
+  );
 }
