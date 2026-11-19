@@ -55,7 +55,7 @@ export default async function CheckinPage({ searchParams }: { searchParams: Prom
     <Shell>
       <div>
         <p className="text-sm text-muted-foreground">{m.gym.name}</p>
-        <h1 className="text-xl font-bold leading-9">سلام {user.firstName}، آماده‌ای؟</h1>
+        <h1 className="text-xl font-bold leading-9">سلام {user.firstName}</h1>
       </div>
       <CheckInButton gymId={g} token={t} />
     </Shell>
