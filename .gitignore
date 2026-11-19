@@ -1,7 +1,12 @@
-node_modules
-.next
-.env
-prisma/*.db
-prisma/*.db-journal
-components/arc
-tsconfig.tsbuildinfo
+# Gradle / Android
+.gradle/
+build/
+local.properties
+*.iml
+.idea/
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+!gradle/wrapper/gradle-wrapper.jar
