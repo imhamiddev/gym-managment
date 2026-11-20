@@ -30,8 +30,8 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.imhamid.gymyar.ui.auth.AuthScreen
 import dev.imhamid.gymyar.ui.auth.BrandMark
+import dev.imhamid.gymyar.ui.athlete.AthleteApp
 import dev.imhamid.gymyar.ui.coach.CoachApp
-import dev.imhamid.gymyar.ui.common.ProfileScreen
 import dev.imhamid.gymyar.ui.components.PrimaryButton
 import dev.imhamid.gymyar.ui.components.ScreenSkeleton
 import dev.imhamid.gymyar.ui.components.SecondaryButton
@@ -96,8 +96,7 @@ private fun AppRoot(vm: AppViewModel) {
                 is AppViewModel.State.Ready -> if (s.me.isCoach) {
                     CoachApp(me = s.me, app = vm)
                 } else {
-                    // The athlete area arrives in the next pull request; until then show the profile.
-                    ProfileScreen(me = s.me, app = vm, gymName = null, modifier = Modifier.fillMaxSize())
+                    AthleteApp(me = s.me, app = vm)
                 }
             }
         }
