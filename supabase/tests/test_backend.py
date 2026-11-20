@@ -74,9 +74,9 @@ check('approve', rpc(A,f"respond_request('{mid}',true)")=={'ok':True})
 check('approve unknown', 'error' in rpc(A,f"respond_request('{mid}',true)"))
 
 # profile
-check('profile bad height', 'error' in rpc(A,f"update_member_profile('{mid}',10,70,'','','',null)"))
-check('profile future birth', 'error' in rpc(A,f"update_member_profile('{mid}',180,70,'','','',date '2999-01-01')"))
-check('profile ok', rpc(A,f"update_member_profile('{mid}',180.4,72.46,'کاهش وزن','برنامه ۱','یادداشت خصوصی',date '1995-03-21')")=={'ok':True})
+check('profile bad height', 'error' in rpc(A,f"update_member_profile('{mid}',10,70,null)"))
+check('profile future birth', 'error' in rpc(A,f"update_member_profile('{mid}',180,70,date '2999-01-01')"))
+check('profile ok', rpc(A,f"update_member_profile('{mid}',180.4,72.46,date '1995-03-21')")=={'ok':True})
 
 # payments
 check('payment bad duration', 'error' in rpc(A,f"save_payment('{mid}',1000,current_date,45)"))
@@ -85,15 +85,15 @@ check('payment ok', rpc(A,f"save_payment('{mid}',500000,current_date - 10,30)")=
 check('payment 2 ok', rpc(A,f"save_payment('{mid}',900000,current_date - 3,60)")=={'ok':True})
 mem = rpc(A,'coach_home()')['members']
 check('member listed with payments', len(mem)==1 and len(mem[0]['payments'])==2 and mem[0]['payments'][0]['amount']==900000, mem)
-check('profile saved', mem[0]['height_cm']==180 and float(mem[0]['weight_kg'])==72.5 and mem[0]['notes']=='یادداشت خصوصی' and mem[0]['birth_date']=='1995-03-21', mem[0])
+check('profile saved', mem[0]['height_cm']==180 and float(mem[0]['weight_kg'])==72.5 and mem[0]['birth_date']=='1995-03-21', mem[0])
 pid = mem[0]['payments'][1]['id']
 check('payment edit', rpc(A,f"save_payment('{mid}',600000,current_date - 10,30,'{pid}')")=={'ok':True})
 check('payment delete', rpc(A,f"delete_payment('{pid}')")=={'ok':True} and len(rpc(A,'coach_home()')['members'][0]['payments'])==1)
 check('payment delete unknown', 'error' in rpc(A,f"delete_payment('{pid}')"))
 
-# athlete view: no private notes
+# athlete view: no coach-only data
 ah = rpc(X,'athlete_home()')['membership']
-check('athlete approved sees program but NOT notes', ah['status']=='APPROVED' and ah['program']=='برنامه ۱' and 'notes' not in ah and len(ah['payments'])==1, ah)
+check('athlete approved sees own data (no plan/notes fields)', ah['status']=='APPROVED' and 'program' not in ah and 'notes' not in ah and 'goal' not in ah and len(ah['payments'])==1, ah)
 check('athlete cannot call coach_home', 'error' in rpc(X,'coach_home()'))
 check('athlete cannot save payment', 'error' in rpc(X,f"save_payment('{mid}',1000,current_date,30)"))
 

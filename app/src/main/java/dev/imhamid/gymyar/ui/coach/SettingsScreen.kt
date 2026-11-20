@@ -89,13 +89,13 @@ private fun GymSettingsCard(gym: GymInfo, vm: CoachViewModel) {
                     val on = d in days
                     Box(
                         modifier = Modifier.clip(MaterialTheme.shapes.medium)
-                            .background(if (on) MaterialTheme.colorScheme.primary.copy(alpha = 0.14f) else MaterialTheme.colorScheme.surfaceVariant)
+                            .background(if (on) MaterialTheme.gym.lime else MaterialTheme.colorScheme.surfaceVariant)
                             .clickable { days = if (on) days - d else days + d }
                             .padding(horizontal = 14.dp, vertical = 8.dp),
                     ) {
                         Text(
                             WEEKDAY_NAMES.getValue(d), style = MaterialTheme.typography.labelLarge,
-                            color = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = if (on) MaterialTheme.gym.onLime else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }

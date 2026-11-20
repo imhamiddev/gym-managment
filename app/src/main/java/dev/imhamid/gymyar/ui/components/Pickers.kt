@@ -175,7 +175,7 @@ fun JalaliDatePickerDialog(
                                     .padding(vertical = 10.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Text(y.fa(), style = MaterialTheme.typography.titleSmall, color = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+                                Text(y.fa(), style = MaterialTheme.typography.titleSmall, color = if (on) MaterialTheme.gym.accent else MaterialTheme.colorScheme.onSurface)
                             }
                         }
                     }

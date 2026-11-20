@@ -148,7 +148,7 @@ fun ScannerScreen(vm: AthleteViewModel, onClose: () -> Unit) {
             CameraPreview(onText = { handle(it) }, modifier = Modifier.fillMaxSize())
             Box(
                 modifier = Modifier.align(Alignment.Center).size(250.dp)
-                    .border(3.dp, Color.White.copy(alpha = 0.9f), RoundedCornerShape(28.dp)),
+                    .border(4.dp, g.lime, RoundedCornerShape(32.dp)),
             )
             Text(
                 "QR باشگاه را داخل کادر بگیرید",

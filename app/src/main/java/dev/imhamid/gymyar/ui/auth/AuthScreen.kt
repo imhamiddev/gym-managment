@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import dev.imhamid.gymyar.R
 import dev.imhamid.gymyar.data.Api
 import dev.imhamid.gymyar.ui.components.AppField
+import dev.imhamid.gymyar.ui.theme.gym
 import dev.imhamid.gymyar.ui.components.ErrorText
 import dev.imhamid.gymyar.ui.components.PrimaryButton
 import dev.imhamid.gymyar.util.en
@@ -58,13 +59,13 @@ private val PHONE_RE = Regex("^09\\d{9}$")
 @Composable
 fun BrandMark(size: Int = 64) {
     Box(
-        modifier = Modifier.size(size.dp).clip(RoundedCornerShape((size * 0.28f).dp)).background(MaterialTheme.colorScheme.primary),
+        modifier = Modifier.size(size.dp).clip(androidx.compose.foundation.shape.CircleShape).background(MaterialTheme.gym.lime),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             painter = painterResource(R.drawable.ic_launcher_foreground),
             contentDescription = null,
-            tint = androidx.compose.ui.graphics.Color.White,
+            tint = MaterialTheme.gym.onLime,
             modifier = Modifier.size((size * 1.25f).dp),
         )
     }
@@ -72,21 +73,22 @@ fun BrandMark(size: Int = 64) {
 
 @Composable
 private fun RoleChoice(label: String, icon: ImageVector, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val primary = MaterialTheme.colorScheme.primary
-    val shape = RoundedCornerShape(16.dp)
+    val g = MaterialTheme.gym
+    val shape = RoundedCornerShape(50)
+    val fg = if (selected) g.onLime else MaterialTheme.colorScheme.onSurfaceVariant
     Row(
         modifier = modifier
             .clip(shape)
-            .background(if (selected) primary.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant)
-            .border(if (selected) 1.5.dp else 1.dp, if (selected) primary else MaterialTheme.colorScheme.outlineVariant, shape)
+            .background(if (selected) g.lime else MaterialTheme.colorScheme.surface)
+            .border(1.dp, if (selected) g.lime else MaterialTheme.colorScheme.outlineVariant, shape)
             .clickable(onClick = onClick)
             .padding(vertical = 14.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(icon, contentDescription = null, tint = if (selected) primary else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+        Icon(icon, contentDescription = null, tint = fg, modifier = Modifier.size(20.dp))
         Spacer(Modifier.size(8.dp))
-        Text(label, color = if (selected) primary else MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.labelLarge)
+        Text(label, color = if (selected) g.onLime else MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.labelLarge)
     }
 }
 
@@ -128,7 +130,7 @@ fun AuthScreen() {
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -198,7 +200,7 @@ fun AuthScreen() {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 TextButton(onClick = { register = !register; error = null }) {
-                    Text(if (register) "وارد شوید" else "ثبت‌نام کنید")
+                    Text(if (register) "وارد شوید" else "ثبت‌نام کنید", color = MaterialTheme.gym.accent, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                 }
             }
         }

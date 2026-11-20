@@ -24,6 +24,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
@@ -32,6 +33,7 @@ import dev.imhamid.gymyar.ui.auth.AuthScreen
 import dev.imhamid.gymyar.ui.auth.BrandMark
 import dev.imhamid.gymyar.ui.athlete.AthleteApp
 import dev.imhamid.gymyar.ui.coach.CoachApp
+import dev.imhamid.gymyar.ui.components.AppBackground
 import dev.imhamid.gymyar.ui.components.NotificationPermissionPrompt
 import dev.imhamid.gymyar.ui.components.PrimaryButton
 import dev.imhamid.gymyar.ui.components.ScreenSkeleton
@@ -73,8 +75,9 @@ private fun AppRoot(vm: AppViewModel) {
     val snack = remember { SnackbarHostState() }
     LaunchedEffect(Unit) { UiEvents.messages.collect { snack.showSnackbar(it) } }
 
+    AppBackground {
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = Color.Transparent,
         snackbarHost = { SnackbarHost(snack) },
     ) { inner ->
         Box(Modifier.fillMaxSize().padding(inner)) {
@@ -100,5 +103,6 @@ private fun AppRoot(vm: AppViewModel) {
                 }
             }
         }
+    }
     }
 }

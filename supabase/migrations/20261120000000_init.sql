@@ -58,9 +58,6 @@ create table app.memberships (
   approved_at timestamptz,
   height_cm   int check (height_cm between 50 and 260),
   weight_kg   numeric(4, 1) check (weight_kg between 20 and 300),
-  goal        text check (char_length(goal) <= 80),
-  program     text check (char_length(program) <= 2000),
-  notes       text check (char_length(notes) <= 1000),   -- private coach notes, never returned to athletes
   birth_date  date
 );
 create index on app.memberships (gym_id);
@@ -240,8 +237,7 @@ begin
       select jsonb_agg(jsonb_build_object(
         'id', m.id, 'first_name', p.first_name, 'last_name', p.last_name, 'phone', p.phone,
         'joined', ((coalesce(m.approved_at, m.created_at)) at time zone 'Asia/Tehran')::date,
-        'height_cm', m.height_cm, 'weight_kg', m.weight_kg, 'goal', m.goal, 'program', m.program,
-        'notes', m.notes, 'birth_date', m.birth_date,
+        'height_cm', m.height_cm, 'weight_kg', m.weight_kg, 'birth_date', m.birth_date,
         'present_last_30', (select count(*) from app.attendance a
                             where a.membership_id = m.id and a.present and a.day >= app.tehran_today() - 29),
         'payments', coalesce((
@@ -427,8 +423,7 @@ begin
 end $$;
 
 create function public.update_member_profile(
-  p_membership uuid, p_height numeric, p_weight numeric,
-  p_goal text, p_program text, p_notes text, p_birth date
+  p_membership uuid, p_height numeric, p_weight numeric, p_birth date
 ) returns jsonb
   language plpgsql security definer set search_path = '' as $$
 declare
@@ -436,9 +431,6 @@ declare
   gid uuid := app.coach_gym_id(uid);
   v_h int;
   v_w numeric(4, 1);
-  v_goal text := nullif(btrim(coalesce(p_goal, '')), '');
-  v_prog text := nullif(btrim(coalesce(p_program, '')), '');
-  v_notes text := nullif(btrim(coalesce(p_notes, '')), '');
   n int;
 begin
   if app.role_of(uid) is distinct from 'COACH' or gid is null then return app.fail('دسترسی لازم را ندارید.'); end if;
@@ -450,15 +442,12 @@ begin
     if round(p_weight, 1) not between 20 and 300 then return app.fail('وزن باید بین ۲۰ تا ۳۰۰ کیلوگرم باشد.'); end if;
     v_w := round(p_weight, 1);
   end if;
-  if char_length(coalesce(v_goal, '')) > 80 then return app.fail('هدف حداکثر ۸۰ حرف باشد.'); end if;
-  if char_length(coalesce(v_prog, '')) > 2000 then return app.fail('برنامه حداکثر ۲۰۰۰ حرف باشد.'); end if;
-  if char_length(coalesce(v_notes, '')) > 1000 then return app.fail('یادداشت حداکثر ۱۰۰۰ حرف باشد.'); end if;
   if p_birth is not null and (p_birth > app.tehran_today() or p_birth < date '1900-01-01') then
     return app.fail('تاریخ تولد معتبر نیست.');
   end if;
 
   update app.memberships
-     set height_cm = v_h, weight_kg = v_w, goal = v_goal, program = v_prog, notes = v_notes, birth_date = p_birth
+     set height_cm = v_h, weight_kg = v_w, birth_date = p_birth
    where id = p_membership and gym_id = gid and status = 'APPROVED';
   get diagnostics n = row_count;
   if n = 0 then return app.fail('عضو پیدا نشد.'); end if;
@@ -678,8 +667,7 @@ begin
     'gym', jsonb_build_object('id', g.id, 'name', g.name, 'coach_name', o.first_name || ' ' || o.last_name,
                               'work_days', to_jsonb(g.work_days), 'open_time', g.open_time,
                               'close_time', g.close_time, 'card_number', g.card_number),
-    'height_cm', m.height_cm, 'weight_kg', m.weight_kg, 'goal', m.goal, 'program', m.program,
-    'birth_date', m.birth_date,
+    'height_cm', m.height_cm, 'weight_kg', m.weight_kg, 'birth_date', m.birth_date,
     'payments', coalesce((
       select jsonb_agg(jsonb_build_object('id', y.id, 'amount', y.amount, 'paid_on', y.paid_on,
                                           'duration_days', y.duration_days)
