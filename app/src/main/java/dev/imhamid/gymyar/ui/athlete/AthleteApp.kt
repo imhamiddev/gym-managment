@@ -82,6 +82,7 @@ fun AthleteApp(me: Me, app: AppViewModel) {
         NavTab("home", "پنل من", Icons.Rounded.Dashboard),
         NavTab("profile", "پروفایل", Icons.Rounded.Person),
     )
+    val motion = remember { NavMotion(tabs.map { it.route }.toSet()) }
 
     if (!st.loaded && st.error == null) {
         ScreenSkeleton()
@@ -107,7 +108,11 @@ fun AthleteApp(me: Me, app: AppViewModel) {
     Column(Modifier.fillMaxSize()) {
         Box(Modifier.weight(1f)) {
             RefreshBox(refreshing = st.refreshing, onRefresh = { vm.refresh() }) {
-                NavHost(navController = nav, startDestination = "home", modifier = Modifier.fillMaxSize()) {
+                NavHost(
+                    navController = nav, startDestination = "home", modifier = Modifier.fillMaxSize(),
+                    enterTransition = motion.enter, exitTransition = motion.exit,
+                    popEnterTransition = motion.popEnter, popExitTransition = motion.popExit,
+                ) {
                     composable("home") {
                         when {
                             membership == null -> Column(
@@ -148,7 +153,7 @@ fun AthleteApp(me: Me, app: AppViewModel) {
                     NavigationBarItem(
                         selected = route == t.route,
                         onClick = { nav.goTab(t.route) },
-                        icon = { Icon(t.icon, contentDescription = null) },
+                        icon = { TabIcon(t.icon, selected = route == t.route) },
                         label = { Text(t.label, style = MaterialTheme.typography.labelSmall, maxLines = 1) },
                     )
                 }

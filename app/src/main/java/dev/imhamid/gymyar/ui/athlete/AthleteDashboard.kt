@@ -1,5 +1,8 @@
 package dev.imhamid.gymyar.ui.athlete
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -83,8 +86,9 @@ fun AthleteDashboard(me: Me, m: AthleteMembership, stale: Boolean, onScan: () ->
                         Text(remaining.fa(), style = MaterialTheme.typography.displaySmall, color = tone)
                         Text("روز مانده", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 8.dp))
                     }
+                    val animatedFraction by animateFloatAsState(fraction, tween(800, easing = FastOutSlowInEasing), label = "tuition-progress")
                     LinearProgressIndicator(
-                        progress = { fraction }, color = tone, trackColor = tone.soft(0.15f),
+                        progress = { animatedFraction }, color = tone, trackColor = tone.soft(0.15f),
                         modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(50)),
                     )
                     if (latest != null) {
