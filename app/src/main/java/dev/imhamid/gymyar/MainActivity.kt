@@ -30,6 +30,7 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.imhamid.gymyar.ui.auth.AuthScreen
 import dev.imhamid.gymyar.ui.auth.BrandMark
+import dev.imhamid.gymyar.ui.coach.CoachApp
 import dev.imhamid.gymyar.ui.common.ProfileScreen
 import dev.imhamid.gymyar.ui.components.PrimaryButton
 import dev.imhamid.gymyar.ui.components.ScreenSkeleton
@@ -92,8 +93,12 @@ private fun AppRoot(vm: AppViewModel) {
                     PrimaryButton("تلاش دوباره", onClick = { vm.load() })
                     SecondaryButton("خروج از حساب", onClick = { vm.logout() })
                 }
-                // The coach / athlete areas arrive in the next pull requests; until then show the profile.
-                is AppViewModel.State.Ready -> ProfileScreen(me = s.me, app = vm, gymName = null, modifier = Modifier.fillMaxSize())
+                is AppViewModel.State.Ready -> if (s.me.isCoach) {
+                    CoachApp(me = s.me, app = vm)
+                } else {
+                    // The athlete area arrives in the next pull request; until then show the profile.
+                    ProfileScreen(me = s.me, app = vm, gymName = null, modifier = Modifier.fillMaxSize())
+                }
             }
         }
     }
