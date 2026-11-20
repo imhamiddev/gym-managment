@@ -1,5 +1,6 @@
 package dev.imhamid.gymyar.ui.athlete
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -7,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -95,8 +97,11 @@ fun AthleteApp(me: Me, app: AppViewModel) {
     }
 
     // The scanner is full screen, without the bottom bar.
-    if (route == "scan") {
-        ScannerScreen(vm = vm, onClose = { nav.popBackStack() })
+    var scanning by rememberSaveable { mutableStateOf(false) }
+    if (scanning) {
+        BackHandler { scanning = false }
+        ScannerScreen(vm = vm, onClose = { scanning = false })
+        return
     }
 
     Column(Modifier.fillMaxSize()) {
@@ -130,15 +135,14 @@ fun AthleteApp(me: Me, app: AppViewModel) {
                                     }
                                 }
                             }
-                            else -> AthleteDashboard(me, membership, st.stale, onScan = { nav.navigate("scan") })
+                            else -> AthleteDashboard(me, membership, st.stale, onScan = { scanning = true })
                         }
                     }
                     composable("profile") { ProfileScreen(me, app, membership?.gym?.name, Modifier.fillMaxSize()) }
-                    composable("scan") { Box(Modifier.fillMaxSize()) }
                 }
             }
         }
-        if (route != "scan") {
+        run {
             NavigationBar(windowInsets = WindowInsets(0, 0, 0, 0), containerColor = MaterialTheme.colorScheme.surface) {
                 tabs.forEach { t ->
                     NavigationBarItem(
