@@ -138,7 +138,7 @@ fun AthleteApp(me: Me, app: AppViewModel) {
                             else -> AthleteDashboard(me, membership, st.stale, onScan = { scanning = true })
                         }
                     }
-                    composable("profile") { ProfileScreen(me, app, membership?.gym?.name, Modifier.fillMaxSize()) }
+                    composable("profile") { ProfileScreen(me, app, membership?.gym?.name, Modifier.fillMaxSize()) { ReminderCard() } }
                 }
             }
         }
