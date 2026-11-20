@@ -32,6 +32,7 @@ import dev.imhamid.gymyar.ui.auth.AuthScreen
 import dev.imhamid.gymyar.ui.auth.BrandMark
 import dev.imhamid.gymyar.ui.athlete.AthleteApp
 import dev.imhamid.gymyar.ui.coach.CoachApp
+import dev.imhamid.gymyar.ui.components.NotificationPermissionPrompt
 import dev.imhamid.gymyar.ui.components.PrimaryButton
 import dev.imhamid.gymyar.ui.components.ScreenSkeleton
 import dev.imhamid.gymyar.ui.components.SecondaryButton
@@ -93,10 +94,9 @@ private fun AppRoot(vm: AppViewModel) {
                     PrimaryButton("تلاش دوباره", onClick = { vm.load() })
                     SecondaryButton("خروج از حساب", onClick = { vm.logout() })
                 }
-                is AppViewModel.State.Ready -> if (s.me.isCoach) {
-                    CoachApp(me = s.me, app = vm)
-                } else {
-                    AthleteApp(me = s.me, app = vm)
+                is AppViewModel.State.Ready -> {
+                    if (s.me.isCoach) CoachApp(me = s.me, app = vm) else AthleteApp(me = s.me, app = vm)
+                    NotificationPermissionPrompt()
                 }
             }
         }

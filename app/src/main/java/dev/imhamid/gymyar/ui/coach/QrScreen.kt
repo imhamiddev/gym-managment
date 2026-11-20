@@ -1,7 +1,18 @@
 package dev.imhamid.gymyar.ui.coach
 
 import android.graphics.Bitmap
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -37,11 +48,10 @@ fun QrScreen(vm: CoachViewModel) {
     var info by remember { mutableStateOf<CheckinInfo?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var stale by remember { mutableStateOf(false) }
-    var color by remember { mutableStateOf("color") }
+    var color by remember { mutableStateOf("bw") }
     var confirm by remember { mutableStateOf(false) }
     var reload by remember { mutableIntStateOf(0) }
     var poster by remember { mutableStateOf<Bitmap?>(null) }
-    var preview by remember { mutableStateOf<Bitmap?>(null) }
 
     LaunchedEffect(reload) {
         when (val r = Repo.checkinInfo()) {
@@ -53,7 +63,6 @@ fun QrScreen(vm: CoachViewModel) {
         val i = info ?: return@LaunchedEffect
         val payload = Qr.payload(i.gymId, i.token)
         withContext(Dispatchers.Default) {
-            preview = Qr.bitmap(payload, 720)
             poster = Qr.poster(context, i.gymName, payload, color == "color")
         }
     }
@@ -71,11 +80,21 @@ fun QrScreen(vm: CoachViewModel) {
         } else {
             PageHeader("QR ثبت حضور", i.gymName, Icons.Rounded.QrCode2, g.attendance)
             AppCard {
-                Column(modifier = Modifier.padding(20.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    val bmp = preview
-                    if (bmp != null) {
-                        Image(bmp.asImageBitmap(), contentDescription = "QR حضور", modifier = Modifier.size(260.dp))
-                    } else SkeletonBox(Modifier.size(260.dp), 260.dp)
+                Column(modifier = Modifier.padding(16.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    // Live preview of exactly what gets printed / shared.
+                    Box(
+                        Modifier.fillMaxWidth().aspectRatio(1240f / 1754f)
+                            .clip(RoundedCornerShape(12.dp)).background(Color.White)
+                            .border(1.dp, g.border, RoundedCornerShape(12.dp)),
+                    ) {
+                        AnimatedContent(targetState = poster, transitionSpec = { fadeIn(tween(250)) togetherWith fadeOut(tween(150)) }, label = "poster") { bmp ->
+                            if (bmp != null) {
+                                Image(bmp.asImageBitmap(), contentDescription = "پوستر QR حضور", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+                            } else {
+                                Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainerHigh))
+                            }
+                        }
+                    }
                     Text(
                         "این QR را چاپ و در باشگاه نصب کنید. ورزشکارها با اپ باشگاه‌یار آن را اسکن می‌کنند تا حضورشان ثبت شود (از نیم‌ساعت قبل تا نیم‌ساعت بعد از ساعت کاری).",
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center,
@@ -83,7 +102,7 @@ fun QrScreen(vm: CoachViewModel) {
                 }
             }
             Text("نسخه‌ی چاپ", style = MaterialTheme.typography.labelLarge, modifier = Modifier.fillMaxWidth())
-            PillTabs(listOf("color" to "رنگی", "bw" to "سیاه و سفید"), color, { color = it }, Modifier.fillMaxWidth())
+            PillTabs(listOf("bw" to "سیاه و سفید", "color" to "رنگی"), color, { color = it }, Modifier.fillMaxWidth())
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                 PrimaryButton("چاپ QR", modifier = Modifier.weight(1f), icon = Icons.Rounded.Print, enabled = poster != null, onClick = {
                     poster?.let { Qr.print(context, it, color == "color") }

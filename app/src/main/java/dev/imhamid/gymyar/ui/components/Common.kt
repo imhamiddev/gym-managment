@@ -1,5 +1,15 @@
 package dev.imhamid.gymyar.ui.components
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -15,7 +25,11 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -37,7 +51,14 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -74,14 +95,16 @@ fun AppCard(
     onClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val source = remember { MutableInteractionSource() }
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier = (if (onClick != null) modifier.pressScale(source, 0.975f) else modifier).fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.gym.border),
     ) {
         Column(
-            modifier = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier,
+            modifier = (if (onClick != null) Modifier.clickable(interactionSource = source, indication = androidx.compose.material3.ripple(), onClick = onClick) else Modifier)
+                .animateContentSize(),
             content = content,
         )
     }
@@ -120,16 +143,27 @@ fun PageHeader(title: String, description: String? = null, icon: ImageVector? = 
 
 @Composable
 fun StatCard(icon: ImageVector, tone: Color, label: String, value: Int, modifier: Modifier = Modifier) {
-    AppCard(modifier = modifier) {
-        Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    // The number counts up when the card appears and whenever the value changes.
+    var target by remember { mutableIntStateOf(0) }
+    LaunchedEffect(value) { target = value }
+    val shown by animateIntAsState(target, tween(700, easing = FastOutSlowInEasing), label = "count")
+    AppCard(modifier = modifier.heightIn(min = STAT_CARD_MIN_HEIGHT)) {
+        Row(
+            modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
             IconBubble(icon, tone, size = 40.dp, iconSize = 20.dp)
-            Column {
-                Text(value.fa(), style = MaterialTheme.typography.titleLarge)
-                Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(shown.fa(), style = MaterialTheme.typography.titleLarge)
+                Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
             }
         }
     }
 }
+
+/** All stat cards share one minimum height so a two-line label never makes a card taller than its neighbours. */
+val STAT_CARD_MIN_HEIGHT = 104.dp
 
 @Composable
 fun EmptyState(icon: ImageVector, tone: Color, title: String, description: String? = null, modifier: Modifier = Modifier) {
@@ -251,22 +285,36 @@ fun PrimaryButton(
     container: Color = MaterialTheme.colorScheme.primary,
     content: Color = MaterialTheme.colorScheme.onPrimary,
 ) {
+    val source = remember { MutableInteractionSource() }
+    val haptic = LocalHapticFeedback.current
     Button(
-        onClick = onClick,
+        onClick = {
+            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            onClick()
+        },
         enabled = enabled && !loading,
         shape = MaterialTheme.shapes.medium,
         colors = ButtonDefaults.buttonColors(containerColor = container, contentColor = content),
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
-        modifier = modifier.fillMaxWidth().height(52.dp),
+        interactionSource = source,
+        modifier = modifier.pressScale(source).fillMaxWidth().height(52.dp),
     ) {
-        if (loading) {
-            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = content)
-        } else {
-            if (icon != null) {
-                Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(8.dp))
+        AnimatedContent(
+            targetState = loading,
+            transitionSpec = { fadeIn(tween(160)) togetherWith fadeOut(tween(120)) },
+            label = "button-content",
+        ) { isLoading ->
+            if (isLoading) {
+                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = content)
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (icon != null) {
+                        Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text(text, style = MaterialTheme.typography.labelLarge)
+                }
             }
-            Text(text, style = MaterialTheme.typography.labelLarge)
         }
     }
 }
@@ -280,6 +328,7 @@ fun SecondaryButton(
     icon: ImageVector? = null,
     tone: Color = MaterialTheme.colorScheme.onSurface,
 ) {
+    val source = remember { MutableInteractionSource() }
     OutlinedButton(
         onClick = onClick,
         enabled = enabled,
@@ -287,7 +336,8 @@ fun SecondaryButton(
         border = BorderStroke(1.dp, MaterialTheme.gym.borderStrong),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = tone),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
-        modifier = modifier.height(48.dp),
+        interactionSource = source,
+        modifier = modifier.pressScale(source).height(48.dp),
     ) {
         if (icon != null) {
             Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -300,10 +350,15 @@ fun SecondaryButton(
 @Composable
 fun ErrorText(message: String?, modifier: Modifier = Modifier) {
     if (message.isNullOrBlank()) return
-    Row(
-        modifier = modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).background(MaterialTheme.gym.danger.soft(0.1f)).padding(12.dp),
+    AnimatedVisibility(
+        visibleState = remember(message) { MutableTransitionState(false).apply { targetState = true } },
+        enter = expandVertically(tween(220)) + fadeIn(tween(220)),
     ) {
-        Text(message, color = MaterialTheme.gym.danger, style = MaterialTheme.typography.bodySmall)
+        Row(
+            modifier = modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).background(MaterialTheme.gym.danger.soft(0.1f)).padding(12.dp),
+        ) {
+            Text(message, color = MaterialTheme.gym.danger, style = MaterialTheme.typography.bodySmall)
+        }
     }
 }
 

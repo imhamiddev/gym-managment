@@ -44,14 +44,14 @@ fun TuitionScreen(data: CoachHome, stale: Boolean, vm: CoachViewModel) {
         if (stale) Banner("حالت آفلاین: آخرین اطلاعات ذخیره‌شده نمایش داده می‌شود.", g.warning)
         PageHeader("مدیریت شهریه", "ثبت و ویرایش پرداخت‌ها", Icons.Rounded.Payments, g.tuition)
 
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-            AppCard(Modifier.weight(1f)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+            AppCard(Modifier.weight(1f).fillMaxHeight()) {
                 Column(Modifier.padding(14.dp)) {
                     Text("پرداخت ثبت‌شده", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(allPayments.size.fa(), style = MaterialTheme.typography.titleLarge)
                 }
             }
-            AppCard(Modifier.weight(1.4f)) {
+            AppCard(Modifier.weight(1.4f).fillMaxHeight()) {
                 Column(Modifier.padding(14.dp)) {
                     Text("مجموع مبلغ", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(formatToman(total), style = MaterialTheme.typography.titleMedium, maxLines = 1)

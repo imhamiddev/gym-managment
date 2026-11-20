@@ -1,5 +1,6 @@
 package dev.imhamid.gymyar.ui.coach
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -35,7 +36,7 @@ private fun NavController.goTab(route: String) = navigate(route) {
 
 @Composable
 private fun SubScreen(title: String, onBack: () -> Unit, content: @Composable () -> Unit) {
-    Column(Modifier.fillMaxSize()) {
+    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -83,6 +84,7 @@ fun CoachApp(me: Me, app: AppViewModel) {
         NavTab("profile", "پروفایل", Icons.Rounded.Person),
     )
     val showBar = tabs.any { it.route == route }
+    val motion = remember(tabs) { NavMotion(tabs.map { it.route }.toSet()) }
 
     if (!st.loaded && st.error == null) {
         ScreenSkeleton()
@@ -100,7 +102,11 @@ fun CoachApp(me: Me, app: AppViewModel) {
     Column(Modifier.fillMaxSize()) {
         Box(Modifier.weight(1f)) {
             RefreshBox(refreshing = st.refreshing, onRefresh = { vm.refresh() }) {
-                NavHost(navController = nav, startDestination = "overview", modifier = Modifier.fillMaxSize()) {
+                NavHost(
+                    navController = nav, startDestination = "overview", modifier = Modifier.fillMaxSize(),
+                    enterTransition = motion.enter, exitTransition = motion.exit,
+                    popEnterTransition = motion.popEnter, popExitTransition = motion.popExit,
+                ) {
                     composable("overview") { OverviewScreen(me, data, st.stale, vm) { nav.goTab(it) } }
                     composable("members") { MembersScreen(data, st.stale, vm) }
                     composable("tuition") { TuitionScreen(data, st.stale, vm) }
@@ -130,7 +136,7 @@ fun CoachApp(me: Me, app: AppViewModel) {
                     NavigationBarItem(
                         selected = route == t.route,
                         onClick = { nav.goTab(t.route) },
-                        icon = { Icon(t.icon, contentDescription = null) },
+                        icon = { TabIcon(t.icon, selected = route == t.route) },
                         label = { Text(t.label, style = MaterialTheme.typography.labelSmall, maxLines = 1) },
                     )
                 }

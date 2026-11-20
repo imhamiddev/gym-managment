@@ -15,4 +15,9 @@ object Settings {
     var remindersEnabled: Boolean
         get() = prefs.getBoolean("reminders", true)
         set(v) { prefs.edit().putBoolean("reminders", v).apply() }
+
+    /** True once the in-app notification permission prompt has been shown (it is only shown once). */
+    var notificationsPrompted: Boolean
+        get() = prefs.getBoolean("notif_prompted", false)
+        set(v) { prefs.edit().putBoolean("notif_prompted", v).apply() }
 }

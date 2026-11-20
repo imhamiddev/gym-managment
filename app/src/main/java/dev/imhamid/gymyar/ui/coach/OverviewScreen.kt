@@ -1,6 +1,17 @@
 package dev.imhamid.gymyar.ui.coach
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -87,6 +98,9 @@ fun OverviewScreen(me: Me, data: CoachHome, stale: Boolean, vm: CoachViewModel, 
     val scope = rememberCoroutineScope()
     val clipboard = LocalClipboardManager.current
     var busy by remember { mutableStateOf(false) }
+    var copied by remember { mutableStateOf(false) }
+    val haptic = LocalHapticFeedback.current
+    LaunchedEffect(copied) { if (copied) { delay(1600); copied = false } }
     val today = remember { todayTehran() }
 
     Column(
@@ -121,8 +135,19 @@ fun OverviewScreen(me: Me, data: CoachHome, stale: Boolean, vm: CoachViewModel, 
             }
             FilledTonalIconButton(onClick = {
                 clipboard.setText(AnnotatedString(gym.code))
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                copied = true
                 UiEvents.toast("کد کپی شد")
-            }) { Icon(Icons.Rounded.ContentCopy, contentDescription = "کپی کد") }
+            }) {
+                AnimatedContent(
+                    targetState = copied,
+                    transitionSpec = { (scaleIn(spring(Spring.DampingRatioMediumBouncy)) + fadeIn()) togetherWith (scaleOut() + fadeOut()) },
+                    label = "copy-icon",
+                ) { done ->
+                    if (done) Icon(Icons.Rounded.Check, contentDescription = "کپی شد", tint = g.success)
+                    else Icon(Icons.Rounded.ContentCopy, contentDescription = "کپی کد")
+                }
+            }
         }
 
         val members = data.members
@@ -145,13 +170,13 @@ fun OverviewScreen(me: Me, data: CoachHome, stale: Boolean, vm: CoachViewModel, 
         val active = rem.count { (it ?: 0) > 7 }
         val expiring = rem.count { it != null && it > 0 && it <= 7 }
         val expired = rem.count { it == null || it == 0 }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-            StatCard(Icons.Rounded.Groups, g.members, "عضو", members.size, Modifier.weight(1f))
-            StatCard(Icons.Rounded.VerifiedUser, g.success, "شهریه فعال", active, Modifier.weight(1f))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+            StatCard(Icons.Rounded.Groups, g.members, "عضو", members.size, Modifier.weight(1f).fillMaxHeight())
+            StatCard(Icons.Rounded.VerifiedUser, g.success, "شهریه فعال", active, Modifier.weight(1f).fillMaxHeight())
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-            StatCard(Icons.Rounded.HourglassTop, g.warning, "رو به پایان", expiring, Modifier.weight(1f))
-            StatCard(Icons.Rounded.ErrorOutline, g.danger, "منقضی / بدون شهریه", expired, Modifier.weight(1f))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+            StatCard(Icons.Rounded.HourglassTop, g.warning, "رو به پایان", expiring, Modifier.weight(1f).fillMaxHeight())
+            StatCard(Icons.Rounded.ErrorOutline, g.danger, "منقضی / بدون شهریه", expired, Modifier.weight(1f).fillMaxHeight())
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
