@@ -45,18 +45,11 @@ fun TuitionScreen(data: CoachHome, stale: Boolean, vm: CoachViewModel) {
         PageHeader("مدیریت شهریه", "ثبت و ویرایش پرداخت‌ها", Icons.Rounded.Payments, g.tuition)
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
-            AppCard(Modifier.weight(1f).fillMaxHeight()) {
-                Column(Modifier.padding(14.dp)) {
-                    Text("پرداخت ثبت‌شده", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(allPayments.size.fa(), style = MaterialTheme.typography.titleLarge)
-                }
-            }
-            AppCard(Modifier.weight(1.4f).fillMaxHeight()) {
-                Column(Modifier.padding(14.dp)) {
-                    Text("مجموع مبلغ", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(formatToman(total), style = MaterialTheme.typography.titleMedium, maxLines = 1)
-                }
-            }
+            InfoTile(Icons.Rounded.Receipt, g.tuition, "پرداخت ثبت‌شده", allPayments.size.fa(), Modifier.weight(1f).fillMaxHeight())
+            InfoTile(
+                Icons.Rounded.Payments, g.success, "مجموع مبلغ",
+                formatToman(total).removeSuffix(" تومان"), Modifier.weight(1f).fillMaxHeight(), unit = "تومان",
+            )
         }
 
         SectionTitle("اعضای باشگاه")
@@ -154,7 +147,6 @@ private fun TuitionSheet(member: MemberDto, plans: List<PlanDto>, vm: CoachViewM
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                 PrimaryButton(
                     if (editingId != null) "ذخیره تغییرات" else "ثبت شهریه", modifier = Modifier.weight(1f), loading = saving,
-                    container = g.tuition, content = androidx.compose.ui.graphics.Color.White,
                     onClick = {
                         if (amountNum == null || amountNum <= 0) { error = "مبلغ شهریه را وارد کنید."; return@PrimaryButton }
                         saving = true; error = null

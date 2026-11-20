@@ -47,6 +47,7 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -97,7 +98,7 @@ fun AppCard(
 ) {
     val source = remember { MutableInteractionSource() }
     Surface(
-        modifier = (if (onClick != null) modifier.pressScale(source, 0.975f) else modifier).fillMaxWidth(),
+        modifier = (if (onClick != null) modifier.pressScale(source, 0.98f) else modifier).fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.gym.border),
@@ -113,7 +114,7 @@ fun AppCard(
 @Composable
 fun SectionTitle(text: String, modifier: Modifier = Modifier, trailing: @Composable (RowScope.() -> Unit)? = null) {
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(text, style = MaterialTheme.typography.titleMedium)
+        Text(text, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f, fill = trailing == null))
         if (trailing != null) trailing()
     }
 }
@@ -121,54 +122,102 @@ fun SectionTitle(text: String, modifier: Modifier = Modifier, trailing: @Composa
 @Composable
 fun IconBubble(icon: ImageVector, tone: Color, size: Dp = 44.dp, iconSize: Dp = 22.dp) {
     Box(
-        modifier = Modifier.size(size).clip(RoundedCornerShape(size * 0.32f)).background(tone.soft()),
+        modifier = Modifier.size(size).clip(CircleShape).background(tone.soft(0.16f)),
         contentAlignment = Alignment.Center,
     ) {
         Icon(icon, contentDescription = null, tint = tone, modifier = Modifier.size(iconSize))
     }
 }
 
+/** White round button holding an icon (header actions, like the reference design). */
 @Composable
-fun PageHeader(title: String, description: String? = null, icon: ImageVector? = null, tone: Color = MaterialTheme.colorScheme.primary) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-        if (icon != null) IconBubble(icon, tone, size = 48.dp)
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            if (description != null) {
-                Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
+fun RoundIcon(icon: ImageVector, description: String?, modifier: Modifier = Modifier, size: Dp = 46.dp, onClick: (() -> Unit)? = null) {
+    val base = modifier.size(size).clip(CircleShape).background(MaterialTheme.colorScheme.surface)
+    Box(
+        modifier = if (onClick != null) base.clickable(onClick = onClick) else base,
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, contentDescription = description, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(size * 0.48f))
     }
 }
 
+/** Screen title block: big title, one quiet line under it, optional action on the leading side. */
+@Composable
+fun PageHeader(
+    title: String,
+    description: String? = null,
+    icon: ImageVector? = null,
+    tone: Color = MaterialTheme.colorScheme.primary,
+    action: (@Composable () -> Unit)? = null,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+        if (icon != null) RoundIcon(icon, null, size = 48.dp)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            if (description != null) {
+                Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        if (action != null) action()
+    }
+}
+
+/** Soft pastel tile with a big number (the "1200 Kcal" tiles of the reference). */
 @Composable
 fun StatCard(icon: ImageVector, tone: Color, label: String, value: Int, modifier: Modifier = Modifier) {
     // The number counts up when the card appears and whenever the value changes.
     var target by remember { mutableIntStateOf(0) }
     LaunchedEffect(value) { target = value }
     val shown by animateIntAsState(target, tween(700, easing = FastOutSlowInEasing), label = "count")
-    AppCard(modifier = modifier.heightIn(min = STAT_CARD_MIN_HEIGHT)) {
-        Row(
-            modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            IconBubble(icon, tone, size = 40.dp, iconSize = 20.dp)
-            Column(modifier = Modifier.weight(1f)) {
-                Text(shown.fa(), style = MaterialTheme.typography.titleLarge)
-                Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
-            }
+    Column(
+        modifier = modifier
+            .heightIn(min = STAT_CARD_MIN_HEIGHT)
+            .clip(MaterialTheme.shapes.large)
+            .background(tone.soft(0.14f))
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Box(Modifier.size(36.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface), contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription = null, tint = tone, modifier = Modifier.size(19.dp))
+        }
+        Column {
+            Text(shown.fa(), style = MaterialTheme.typography.titleLarge)
+            Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
         }
     }
 }
 
 /** All stat cards share one minimum height so a two-line label never makes a card taller than its neighbours. */
-val STAT_CARD_MIN_HEIGHT = 104.dp
+val STAT_CARD_MIN_HEIGHT = 112.dp
+
+/** Pastel tile with free text value (for athlete home: days left, last payment...). */
+@Composable
+fun InfoTile(icon: ImageVector, tone: Color, label: String, value: String, modifier: Modifier = Modifier, unit: String? = null) {
+    Column(
+        modifier = modifier
+            .heightIn(min = STAT_CARD_MIN_HEIGHT)
+            .clip(MaterialTheme.shapes.large)
+            .background(tone.soft(0.14f))
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Box(Modifier.size(36.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface), contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription = null, tint = tone, modifier = Modifier.size(19.dp))
+        }
+        Column {
+            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(value, style = MaterialTheme.typography.titleLarge, maxLines = 1)
+                if (unit != null) Text(unit, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 3.dp))
+            }
+            Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
+        }
+    }
+}
 
 @Composable
 fun EmptyState(icon: ImageVector, tone: Color, title: String, description: String? = null, modifier: Modifier = Modifier) {
     Column(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 32.dp),
+        modifier = modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 28.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -177,6 +226,16 @@ fun EmptyState(icon: ImageVector, tone: Color, title: String, description: Strin
         if (description != null) {
             Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
         }
+    }
+}
+
+/** A plain label/value line used inside cards. */
+@Composable
+fun KeyValueRow(label: String, value: String, modifier: Modifier = Modifier) {
+    Row(modifier = modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.weight(1f))
+        Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -207,7 +266,7 @@ fun RemainingBadge(days: Int?, modifier: Modifier = Modifier) {
 @Composable
 fun Avatar(first: String, last: String, size: Dp = 44.dp) {
     val g = MaterialTheme.gym
-    val palette = listOf(MaterialTheme.colorScheme.primary, g.members, g.tuition, g.attendance, g.warning, g.success)
+    val palette = listOf(g.accent, g.members, g.tuition, g.attendance, g.warning, g.success)
     var h = 0
     for (ch in "$first $last") h = (h * 31 + ch.code) and 0x7fffffff
     val tone = palette[h % palette.size]
@@ -221,6 +280,16 @@ fun Avatar(first: String, last: String, size: Dp = 44.dp) {
 }
 
 // ------------------------------------------------------------------ inputs & buttons
+
+@Composable
+private fun fieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedBorderColor = MaterialTheme.gym.accent,
+    focusedLabelColor = MaterialTheme.gym.accent,
+    cursorColor = MaterialTheme.gym.accent,
+    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+    focusedContainerColor = MaterialTheme.colorScheme.surface,
+    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+)
 
 @Composable
 fun AppField(
@@ -251,6 +320,7 @@ fun AppField(
         singleLine = singleLine,
         minLines = minLines,
         shape = MaterialTheme.shapes.medium,
+        colors = fieldColors(),
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = imeAction),
         keyboardActions = KeyboardActions(onDone = { onDone?.invoke() }),
         visualTransformation = if (password) PasswordVisualTransformation() else VisualTransformation.None,
@@ -267,13 +337,21 @@ fun SearchField(value: String, onValueChange: (String) -> Unit, placeholder: Str
         value = value,
         onValueChange = onValueChange,
         placeholder = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant) },
-        leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
+        leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
         singleLine = true,
-        shape = MaterialTheme.shapes.large,
+        shape = CircleShape,
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.gym.accent,
+            unfocusedBorderColor = Color.Transparent,
+            cursorColor = MaterialTheme.gym.accent,
+            focusedContainerColor = MaterialTheme.colorScheme.surface,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+        ),
         modifier = modifier.fillMaxWidth(),
     )
 }
 
+/** Main action: full-width lime pill with dark text. */
 @Composable
 fun PrimaryButton(
     text: String,
@@ -293,11 +371,15 @@ fun PrimaryButton(
             onClick()
         },
         enabled = enabled && !loading,
-        shape = MaterialTheme.shapes.medium,
-        colors = ButtonDefaults.buttonColors(containerColor = container, contentColor = content),
+        shape = CircleShape,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = container, contentColor = content,
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        ),
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
         interactionSource = source,
-        modifier = modifier.pressScale(source).fillMaxWidth().height(52.dp),
+        modifier = modifier.pressScale(source).fillMaxWidth().height(54.dp),
     ) {
         AnimatedContent(
             targetState = loading,
@@ -312,13 +394,14 @@ fun PrimaryButton(
                         Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(8.dp))
                     }
-                    Text(text, style = MaterialTheme.typography.labelLarge)
+                    Text(text, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                 }
             }
         }
     }
 }
 
+/** Quiet outlined pill. */
 @Composable
 fun SecondaryButton(
     text: String,
@@ -332,18 +415,31 @@ fun SecondaryButton(
     OutlinedButton(
         onClick = onClick,
         enabled = enabled,
-        shape = MaterialTheme.shapes.medium,
+        shape = CircleShape,
         border = BorderStroke(1.dp, MaterialTheme.gym.borderStrong),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = tone),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 10.dp),
         interactionSource = source,
-        modifier = modifier.pressScale(source).height(48.dp),
+        modifier = modifier.pressScale(source).height(50.dp),
     ) {
         if (icon != null) {
             Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
         }
         Text(text, style = MaterialTheme.typography.labelLarge)
+    }
+}
+
+/** Small black pill (the "View" button of the reference). */
+@Composable
+fun InkButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, icon: ImageVector? = null) {
+    Row(
+        modifier = modifier.clip(CircleShape).background(MaterialTheme.gym.ink).clickable(onClick = onClick).padding(horizontal = 18.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        if (icon != null) Icon(icon, contentDescription = null, tint = MaterialTheme.gym.onInk, modifier = Modifier.size(16.dp))
+        Text(text, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.gym.onInk)
     }
 }
 
@@ -373,11 +469,13 @@ fun ConfirmDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        shape = MaterialTheme.shapes.extraLarge,
+        containerColor = MaterialTheme.colorScheme.surface,
         title = { Text(title) },
         text = { Text(text) },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text(confirmLabel, color = if (danger) MaterialTheme.gym.danger else MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                Text(confirmLabel, color = if (danger) MaterialTheme.gym.danger else MaterialTheme.gym.accent, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("انصراف") } },

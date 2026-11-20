@@ -1,24 +1,23 @@
 package dev.imhamid.gymyar.ui.common
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Logout
-import androidx.compose.material3.Icon
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -28,6 +27,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import dev.imhamid.gymyar.AppViewModel
 import dev.imhamid.gymyar.data.Me
@@ -38,7 +39,8 @@ import dev.imhamid.gymyar.ui.components.AppField
 import dev.imhamid.gymyar.ui.components.Avatar
 import dev.imhamid.gymyar.ui.components.ConfirmDialog
 import dev.imhamid.gymyar.ui.components.ErrorText
-import dev.imhamid.gymyar.ui.components.PrimaryButton
+import dev.imhamid.gymyar.ui.components.InkButton
+import dev.imhamid.gymyar.ui.components.ScreenColumn
 import dev.imhamid.gymyar.ui.components.SecondaryButton
 import dev.imhamid.gymyar.ui.components.SectionTitle
 import dev.imhamid.gymyar.ui.components.ToneBadge
@@ -50,25 +52,59 @@ import kotlinx.coroutines.launch
 
 @Composable
 private fun ThemeChoice(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val primary = MaterialTheme.colorScheme.primary
-    Box2(
+    val g = MaterialTheme.gym
+    Box(
         modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
-            .background(if (selected) primary else MaterialTheme.colorScheme.surfaceVariant)
+            .clip(CircleShape)
+            .background(if (selected) g.lime else MaterialTheme.colorScheme.surfaceVariant)
             .clickable(onClick = onClick)
             .padding(vertical = 12.dp),
+        contentAlignment = Alignment.Center,
     ) {
         Text(
             label,
-            color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+            color = if (selected) g.onLime else MaterialTheme.colorScheme.onSurface,
             style = MaterialTheme.typography.labelLarge,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
         )
     }
 }
 
+/** Name is only editable after tapping "ویرایش پروفایل" — the page itself just shows it. */
 @Composable
-private fun Box2(modifier: Modifier, content: @Composable () -> Unit) {
-    androidx.compose.foundation.layout.Box(modifier = modifier, contentAlignment = Alignment.Center) { content() }
+private fun EditProfileDialog(me: Me, app: AppViewModel, onDismiss: () -> Unit) {
+    val scope = rememberCoroutineScope()
+    var first by remember { mutableStateOf(me.firstName) }
+    var last by remember { mutableStateOf(me.lastName) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var saving by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = { if (!saving) onDismiss() },
+        shape = MaterialTheme.shapes.extraLarge,
+        containerColor = MaterialTheme.colorScheme.surface,
+        title = { Text("ویرایش پروفایل") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                AppField(first, { first = it }, "نام")
+                AppField(last, { last = it }, "نام خانوادگی")
+                ErrorText(error)
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = !saving, onClick = {
+                saving = true; error = null
+                scope.launch {
+                    when (val r = Repo.updateMyProfile(first, last)) {
+                        is Res.Ok -> { UiEvents.toast("پروفایل ذخیره شد"); app.refreshMe(); onDismiss() }
+                        is Res.Fail -> error = r.message
+                    }
+                    saving = false
+                }
+            }) { Text("ذخیره", color = MaterialTheme.gym.accent, fontWeight = FontWeight.Bold) }
+        },
+        dismissButton = { TextButton(enabled = !saving, onClick = onDismiss) { Text("انصراف") } },
+    )
 }
 
 /** Account info, theme and logout. Shared by coach and athlete; [extra] adds role-specific cards. */
@@ -80,53 +116,30 @@ fun ProfileScreen(
     modifier: Modifier = Modifier,
     extra: @Composable () -> Unit = {},
 ) {
-    val scope = rememberCoroutineScope()
-    var first by remember(me.firstName) { mutableStateOf(me.firstName) }
-    var last by remember(me.lastName) { mutableStateOf(me.lastName) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var saving by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf(false) }
     var confirmLogout by remember { mutableStateOf(false) }
     val theme by app.themeMode.collectAsStateWithLifecycleCompat()
 
-    Column(
-        modifier = modifier.verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            Avatar(me.firstName, me.lastName, size = 64.dp)
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(me.fullName, style = MaterialTheme.typography.titleLarge)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    ToneBadge(me.roleLabel, MaterialTheme.colorScheme.primary)
-                    Text(me.phone.fa(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                if (gymName != null) {
-                    Text("باشگاه: $gymName", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+    ScreenColumn(modifier = modifier) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Avatar(me.firstName, me.lastName, size = 88.dp)
+            Text(me.fullName, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                ToneBadge(me.roleLabel, MaterialTheme.gym.accent)
+                Text(me.phone.fa(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+            if (gymName != null) {
+                Text("باشگاه: $gymName", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Spacer(Modifier.height(4.dp))
+            InkButton("ویرایش پروفایل", onClick = { editing = true }, icon = Icons.Rounded.Edit)
         }
 
-        AppCard {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                SectionTitle("ویرایش نام")
-                AppField(first, { first = it }, "نام")
-                AppField(last, { last = it }, "نام خانوادگی")
-                ErrorText(error)
-                PrimaryButton(
-                    "ذخیره", loading = saving,
-                    onClick = {
-                        saving = true; error = null
-                        scope.launch {
-                            when (val r = Repo.updateMyProfile(first, last)) {
-                                is Res.Ok -> { UiEvents.toast("پروفایل ذخیره شد"); app.refreshMe() }
-                                is Res.Fail -> error = r.message
-                            }
-                            saving = false
-                        }
-                    },
-                )
-            }
-        }
+        extra()
 
         AppCard {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -139,8 +152,6 @@ fun ProfileScreen(
             }
         }
 
-        extra()
-
         SecondaryButton(
             "خروج از حساب", onClick = { confirmLogout = true },
             icon = Icons.AutoMirrored.Rounded.Logout, tone = MaterialTheme.gym.danger,
@@ -148,6 +159,8 @@ fun ProfileScreen(
         )
         Spacer(Modifier.height(8.dp))
     }
+
+    if (editing) EditProfileDialog(me, app, onDismiss = { editing = false })
 
     if (confirmLogout) {
         ConfirmDialog(

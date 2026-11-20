@@ -109,9 +109,6 @@ private fun MemberSheet(member: MemberDto, vm: CoachViewModel, onClose: () -> Un
 
     var height by remember(member.id) { mutableStateOf(member.heightCm?.toString().orEmpty()) }
     var weight by remember(member.id) { mutableStateOf(member.weightKg?.let { if (it % 1.0 == 0.0) it.toInt().toString() else it.toString() }.orEmpty()) }
-    var goal by remember(member.id) { mutableStateOf(member.goal.orEmpty()) }
-    var program by remember(member.id) { mutableStateOf(member.program.orEmpty()) }
-    var notes by remember(member.id) { mutableStateOf(member.notes.orEmpty()) }
     var birth by remember(member.id) { mutableStateOf(member.birth) }
     var error by remember { mutableStateOf<String?>(null) }
     var saving by remember { mutableStateOf(false) }
@@ -150,15 +147,12 @@ private fun MemberSheet(member: MemberDto, vm: CoachViewModel, onClose: () -> Un
                 }
             }
 
-            SectionTitle("مشخصات و برنامه")
+            SectionTitle("مشخصات بدنی")
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                 AppField(height, { height = it }, "قد (cm)", Modifier.weight(1f), keyboardType = KeyboardType.Number, ltr = true)
                 AppField(weight, { weight = it }, "وزن (kg)", Modifier.weight(1f), keyboardType = KeyboardType.Decimal, ltr = true)
             }
             DateField("تاریخ تولد", birth, { birth = it }, maxDate = today, placeholder = "ثبت نشده")
-            AppField(goal, { goal = it }, "هدف (مثلاً کاهش وزن)")
-            AppField(program, { program = it }, "برنامه تمرینی (برای ورزشکار نمایش داده می‌شود)", singleLine = false, minLines = 3)
-            AppField(notes, { notes = it }, "یادداشت خصوصی مربی (ورزشکار نمی‌بیند)", singleLine = false, minLines = 2)
             ErrorText(error)
             PrimaryButton("ذخیره مشخصات", loading = saving, onClick = {
                 saving = true; error = null
@@ -167,9 +161,6 @@ private fun MemberSheet(member: MemberDto, vm: CoachViewModel, onClose: () -> Un
                         put("p_membership", member.id)
                         put("p_height", if (height.isBlank()) null else num(height))
                         put("p_weight", if (weight.isBlank()) null else num(weight))
-                        put("p_goal", goal)
-                        put("p_program", program)
-                        put("p_notes", notes)
                         put("p_birth", birth?.toString())
                     })
                     if (err != null) error = err else UiEvents.toast("مشخصات ذخیره شد")

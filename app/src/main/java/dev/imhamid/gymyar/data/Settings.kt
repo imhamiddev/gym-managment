@@ -12,10 +12,6 @@ object Settings {
         get() = runCatching { ThemeMode.valueOf(prefs.getString("theme", "SYSTEM") ?: "SYSTEM") }.getOrDefault(ThemeMode.SYSTEM)
         set(v) { prefs.edit().putString("theme", v.name).apply() }
 
-    var remindersEnabled: Boolean
-        get() = prefs.getBoolean("reminders", true)
-        set(v) { prefs.edit().putBoolean("reminders", v).apply() }
-
     /** True once the in-app notification permission prompt has been shown (it is only shown once). */
     var notificationsPrompted: Boolean
         get() = prefs.getBoolean("notif_prompted", false)

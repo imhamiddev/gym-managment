@@ -93,7 +93,7 @@ object Qr {
     fun poster(context: Context, gymName: String, payload: String, color: Boolean): Bitmap {
         val w = 1240
         val h = 1754
-        val ink = if (color) Color.parseColor("#0A7CF0") else Color.BLACK
+        val ink = if (color) Color.parseColor("#2E6B00") else Color.BLACK
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
         c.drawColor(Color.WHITE)

@@ -26,8 +26,6 @@ import dev.imhamid.gymyar.ui.common.ProfileScreen
 import dev.imhamid.gymyar.ui.components.*
 import dev.imhamid.gymyar.ui.theme.gym
 
-private data class NavTab(val route: String, val label: String, val icon: ImageVector)
-
 private fun NavController.goTab(route: String) = navigate(route) {
     popUpTo(graph.findStartDestination().id) { saveState = true }
     launchSingleTop = true
@@ -36,22 +34,25 @@ private fun NavController.goTab(route: String) = navigate(route) {
 
 @Composable
 private fun SubScreen(title: String, onBack: () -> Unit, content: @Composable () -> Unit) {
-    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "بازگشت") }
-            Text(title, style = MaterialTheme.typography.titleMedium)
+    AppBackground {
+        Column(Modifier.fillMaxSize()) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                RoundIcon(Icons.AutoMirrored.Rounded.ArrowBack, "بازگشت", onClick = onBack)
+                Text(title, style = MaterialTheme.typography.titleLarge)
+            }
+            Box(Modifier.weight(1f)) { content() }
         }
-        Box(Modifier.weight(1f)) { content() }
     }
 }
 
 @Composable
 private fun MoreRow(icon: ImageVector, tone: androidx.compose.ui.graphics.Color, title: String, hint: String, onClick: () -> Unit) {
     AppCard(onClick = onClick) {
-        Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             IconBubble(icon, tone)
             Column(modifier = Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.titleSmall)
@@ -73,72 +74,65 @@ fun CoachApp(me: Me, app: AppViewModel) {
     val gym = data.gym
     val g = MaterialTheme.gym
 
-    val tabs = if (gym != null) listOf(
-        NavTab("overview", "نمای کلی", Icons.Rounded.Dashboard),
-        NavTab("members", "اعضا", Icons.Rounded.Groups),
-        NavTab("tuition", "شهریه", Icons.Rounded.Payments),
-        NavTab("attendance", "حضور", Icons.Rounded.EventAvailable),
-        NavTab("more", "بیشتر", Icons.Rounded.Menu),
+    // Attendance is the daily action, so it is the big lime button in the middle of the bar.
+    val specs = if (gym != null) listOf(
+        NavSpec("overview", "نمای کلی", Icons.Rounded.Dashboard),
+        NavSpec("members", "اعضا", Icons.Rounded.Groups),
+        NavSpec("attendance", "حضور و غیاب", Icons.Rounded.EventAvailable, center = true),
+        NavSpec("tuition", "شهریه", Icons.Rounded.Payments),
+        NavSpec("more", "بیشتر", Icons.Rounded.Menu),
     ) else listOf(
-        NavTab("overview", "نمای کلی", Icons.Rounded.Dashboard),
-        NavTab("profile", "پروفایل", Icons.Rounded.Person),
+        NavSpec("overview", "نمای کلی", Icons.Rounded.Dashboard),
+        NavSpec("profile", "پروفایل", Icons.Rounded.Person),
     )
-    val showBar = tabs.any { it.route == route }
-    val motion = remember(tabs) { NavMotion(tabs.map { it.route }.toSet()) }
+    val showBar = specs.any { it.route == route }
+    val motion = remember(specs.size) { NavMotion(specs.map { it.route }.toSet()) }
 
-    if (!st.loaded && st.error == null) {
-        ScreenSkeleton()
-        return
-    }
-    if (!st.loaded) {
-        Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterVertically), horizontalAlignment = Alignment.CenterHorizontally) {
-            ErrorText(st.error)
-            PrimaryButton("تلاش دوباره", onClick = { vm.refresh() })
-            SecondaryButton("خروج از حساب", onClick = { app.logout() })
-        }
-        return
-    }
-
-    Column(Modifier.fillMaxSize()) {
-        Box(Modifier.weight(1f)) {
-            RefreshBox(refreshing = st.refreshing, onRefresh = { vm.refresh() }) {
-                NavHost(
-                    navController = nav, startDestination = "overview", modifier = Modifier.fillMaxSize(),
-                    enterTransition = motion.enter, exitTransition = motion.exit,
-                    popEnterTransition = motion.popEnter, popExitTransition = motion.popExit,
-                ) {
-                    composable("overview") { OverviewScreen(me, data, st.stale, vm) { nav.goTab(it) } }
-                    composable("members") { MembersScreen(data, st.stale, vm) }
-                    composable("tuition") { TuitionScreen(data, st.stale, vm) }
-                    composable("attendance") { AttendanceScreen(data, st.stale, vm) }
-                    composable("more") {
-                        Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            PageHeader("بیشتر", gym?.name, Icons.Rounded.Menu)
-                            MoreRow(Icons.Rounded.QrCode2, g.attendance, "QR ثبت حضور", "نمایش، چاپ و اشتراک‌گذاری") { nav.navigate("qr") }
-                            if (gym?.isOwner == true) {
-                                MoreRow(Icons.Rounded.Settings, MaterialTheme.colorScheme.primary, "تنظیمات باشگاه", "روزها، ساعت، کد دعوت، پلن‌ها و مربیان") { nav.navigate("settings") }
+    Box(Modifier.fillMaxSize()) {
+        when {
+            !st.loaded && st.error == null -> ScreenSkeleton()
+            !st.loaded -> Column(
+                Modifier.fillMaxSize().padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterVertically),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                ErrorText(st.error)
+                PrimaryButton("تلاش دوباره", onClick = { vm.refresh() })
+                SecondaryButton("خروج از حساب", onClick = { app.logout() })
+            }
+            else -> Column(Modifier.fillMaxSize()) {
+                Box(Modifier.weight(1f)) {
+                    RefreshBox(refreshing = st.refreshing, onRefresh = { vm.refresh() }) {
+                        NavHost(
+                            navController = nav, startDestination = "overview", modifier = Modifier.fillMaxSize(),
+                            enterTransition = motion.enter, exitTransition = motion.exit,
+                            popEnterTransition = motion.popEnter, popExitTransition = motion.popExit,
+                        ) {
+                            composable("overview") { OverviewScreen(me, data, st.stale, vm) }
+                            composable("members") { MembersScreen(data, st.stale, vm) }
+                            composable("tuition") { TuitionScreen(data, st.stale, vm) }
+                            composable("attendance") { AttendanceScreen(data, st.stale, vm) }
+                            composable("more") {
+                                ScreenColumn(spacing = 12.dp) {
+                                    PageHeader("بیشتر", gym?.name, Icons.Rounded.Menu)
+                                    MoreRow(Icons.Rounded.QrCode2, g.attendance, "QR ثبت حضور", "نمایش، چاپ و اشتراک‌گذاری") { nav.navigate("qr") }
+                                    if (gym?.isOwner == true) {
+                                        MoreRow(Icons.Rounded.Settings, g.tuition, "تنظیمات باشگاه", "روزها، ساعت، کد دعوت، پلن‌ها و مربیان") { nav.navigate("settings") }
+                                    }
+                                    MoreRow(Icons.Rounded.Person, g.members, "پروفایل", "اطلاعات حساب، تم و خروج") { nav.navigate("profile") }
+                                }
                             }
-                            MoreRow(Icons.Rounded.Person, g.members, "پروفایل", "اطلاعات حساب، تم و خروج") { nav.navigate("profile") }
+                            composable("qr") { SubScreen("QR ثبت حضور", { nav.popBackStack() }) { QrScreen(vm) } }
+                            composable("settings") { SubScreen("تنظیمات باشگاه", { nav.popBackStack() }) { SettingsScreen(data, vm) } }
+                            composable("profile") {
+                                if (gym == null) ProfileScreen(me, app, null, Modifier.fillMaxSize())
+                                else SubScreen("پروفایل", { nav.popBackStack() }) { ProfileScreen(me, app, gym.name, Modifier.fillMaxSize()) }
+                            }
                         }
                     }
-                    composable("qr") { SubScreen("QR ثبت حضور", { nav.popBackStack() }) { QrScreen(vm) } }
-                    composable("settings") { SubScreen("تنظیمات باشگاه", { nav.popBackStack() }) { SettingsScreen(data, vm) } }
-                    composable("profile") {
-                        if (gym == null) ProfileScreen(me, app, null, Modifier.fillMaxSize())
-                        else SubScreen("پروفایل", { nav.popBackStack() }) { ProfileScreen(me, app, gym.name, Modifier.fillMaxSize()) }
-                    }
                 }
-            }
-        }
-        if (showBar) {
-            NavigationBar(windowInsets = WindowInsets(0, 0, 0, 0), containerColor = MaterialTheme.colorScheme.surface) {
-                tabs.forEach { t ->
-                    NavigationBarItem(
-                        selected = route == t.route,
-                        onClick = { nav.goTab(t.route) },
-                        icon = { TabIcon(t.icon, selected = route == t.route) },
-                        label = { Text(t.label, style = MaterialTheme.typography.labelSmall, maxLines = 1) },
-                    )
+                if (showBar) {
+                    FloatingNavBar(items = specs, selected = route, onSelect = { nav.goTab(it) })
                 }
             }
         }

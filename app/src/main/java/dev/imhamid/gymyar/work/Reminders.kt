@@ -21,7 +21,6 @@ import dev.imhamid.gymyar.R
 import dev.imhamid.gymyar.data.Api
 import dev.imhamid.gymyar.data.Repo
 import dev.imhamid.gymyar.data.Res
-import dev.imhamid.gymyar.data.Settings
 import dev.imhamid.gymyar.util.TEHRAN
 import dev.imhamid.gymyar.util.fa
 import dev.imhamid.gymyar.util.remainingDays
@@ -69,7 +68,7 @@ object Reminders {
 class ReminderWorker(private val context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
-        if (!Settings.remindersEnabled || !Api.signedIn.value || !Reminders.canNotify(context)) return Result.success()
+        if (!Api.signedIn.value || !Reminders.canNotify(context)) return Result.success()
         // Works offline too: Repo falls back to the last cached answer.
         val r = Repo.athleteHome()
         if (r !is Res.Ok) return Result.success()

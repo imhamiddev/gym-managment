@@ -36,6 +36,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavBackStackEntry
 import dev.imhamid.gymyar.data.Settings
+import dev.imhamid.gymyar.ui.theme.gym
 import kotlinx.coroutines.delay
 
 // ------------------------------------------------------------------ press feedback
@@ -120,7 +121,7 @@ fun NotificationPermissionPrompt() {
     if (show) {
         AlertDialog(
             onDismissRequest = { show = false; Settings.notificationsPrompted = true },
-            icon = { Icon(Icons.Rounded.Notifications, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+            icon = { Icon(Icons.Rounded.Notifications, contentDescription = null, tint = MaterialTheme.gym.accent) },
             title = { Text("فعال‌سازی اعلان‌ها") },
             text = { Text("برای اینکه یادآوری‌ها (مثل نزدیک شدن پایان شهریه) را به‌موقع ببینید، اجازه‌ی ارسال اعلان بدهید.") },
             confirmButton = {

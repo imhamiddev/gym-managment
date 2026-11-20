@@ -35,6 +35,7 @@ import dev.imhamid.gymyar.data.GymInfo
 import dev.imhamid.gymyar.data.Me
 import dev.imhamid.gymyar.data.PendingDto
 import dev.imhamid.gymyar.ui.components.*
+import androidx.compose.foundation.shape.CircleShape
 import dev.imhamid.gymyar.ui.theme.gym
 import dev.imhamid.gymyar.util.*
 import kotlinx.coroutines.launch
@@ -82,7 +83,7 @@ private fun RequestRow(p: PendingDto, busy: Boolean, onRespond: (Boolean) -> Uni
         }
         FilledIconButton(
             onClick = { onRespond(true) }, enabled = !busy,
-            colors = IconButtonDefaults.filledIconButtonColors(containerColor = g.success, contentColor = androidx.compose.ui.graphics.Color.White),
+            colors = IconButtonDefaults.filledIconButtonColors(containerColor = g.lime, contentColor = g.onLime),
         ) { Icon(Icons.Rounded.Check, contentDescription = "تایید") }
         FilledTonalIconButton(
             onClick = { onRespond(false) }, enabled = !busy,
@@ -92,7 +93,7 @@ private fun RequestRow(p: PendingDto, busy: Boolean, onRespond: (Boolean) -> Uni
 }
 
 @Composable
-fun OverviewScreen(me: Me, data: CoachHome, stale: Boolean, vm: CoachViewModel, go: (String) -> Unit) {
+fun OverviewScreen(me: Me, data: CoachHome, stale: Boolean, vm: CoachViewModel) {
     val gym = data.gym
     val g = MaterialTheme.gym
     val scope = rememberCoroutineScope()
@@ -103,49 +104,53 @@ fun OverviewScreen(me: Me, data: CoachHome, stale: Boolean, vm: CoachViewModel, 
     LaunchedEffect(copied) { if (copied) { delay(1600); copied = false } }
     val today = remember { todayTehran() }
 
-    Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
+    ScreenColumn {
         if (stale) Banner("حالت آفلاین: آخرین اطلاعات ذخیره‌شده نمایش داده می‌شود.", g.warning)
 
         if (gym == null) {
             PageHeader("خوش آمدید، ${me.firstName}", "برای شروع، باشگاه خود را بسازید.", Icons.Rounded.Dashboard)
             CreateGymCard(vm)
-            return@Column
+            return@ScreenColumn
         }
 
-        PageHeader(gym.name, "نمای کلی باشگاه", Icons.Rounded.Dashboard)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Avatar(me.firstName, me.lastName, size = 52.dp)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(gym.name, style = MaterialTheme.typography.titleLarge, maxLines = 1)
+                Text("سلام ${me.firstName}، خوش آمدید", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+            }
+        }
 
-        val primary = MaterialTheme.colorScheme.primary
+        // invite code: the one lime block of the page
         Row(
-            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(primary.copy(alpha = 0.10f)).padding(18.dp),
+            modifier = Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(g.lime).padding(18.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Box(Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).background(primary), contentAlignment = Alignment.Center) {
-                Icon(Icons.Rounded.ConfirmationNumber, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary)
-            }
             Column(modifier = Modifier.weight(1f)) {
-                Text("کد باشگاه برای ورزشکاران", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("کد باشگاه برای ورزشکاران", style = MaterialTheme.typography.bodySmall, color = g.onLime.copy(alpha = 0.7f))
                 Text(
                     gym.code,
                     style = MaterialTheme.typography.headlineSmall.copy(textDirection = TextDirection.Ltr, letterSpacing = 6.sp),
+                    color = g.onLime,
                 )
             }
-            FilledTonalIconButton(onClick = {
-                clipboard.setText(AnnotatedString(gym.code))
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                copied = true
-                UiEvents.toast("کد کپی شد")
-            }) {
+            Box(
+                modifier = Modifier.size(46.dp).clip(CircleShape).background(g.ink).clickable {
+                    clipboard.setText(AnnotatedString(gym.code))
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    copied = true
+                    UiEvents.toast("کد کپی شد")
+                },
+                contentAlignment = Alignment.Center,
+            ) {
                 AnimatedContent(
                     targetState = copied,
                     transitionSpec = { (scaleIn(spring(Spring.DampingRatioMediumBouncy)) + fadeIn()) togetherWith (scaleOut() + fadeOut()) },
                     label = "copy-icon",
                 ) { done ->
-                    if (done) Icon(Icons.Rounded.Check, contentDescription = "کپی شد", tint = g.success)
-                    else Icon(Icons.Rounded.ContentCopy, contentDescription = "کپی کد")
+                    if (done) Icon(Icons.Rounded.Check, contentDescription = "کپی شد", tint = g.lime)
+                    else Icon(Icons.Rounded.ContentCopy, contentDescription = "کپی کد", tint = g.onInk)
                 }
             }
         }
@@ -179,12 +184,6 @@ fun OverviewScreen(me: Me, data: CoachHome, stale: Boolean, vm: CoachViewModel, 
             StatCard(Icons.Rounded.ErrorOutline, g.danger, "منقضی / بدون شهریه", expired, Modifier.weight(1f).fillMaxHeight())
         }
 
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            QuickAction(Icons.Rounded.EventAvailable, g.attendance, "حضور و غیاب", "ثبت جلسه امروز") { go("attendance") }
-            QuickAction(Icons.Rounded.Payments, g.tuition, "شهریه", "ثبت پرداخت جدید") { go("tuition") }
-            QuickAction(Icons.Rounded.Groups, g.members, "اعضا", "مشخصات و وضعیت") { go("members") }
-        }
-
         SectionTitle("درخواست‌های عضویت") {
             if (data.pending.isNotEmpty()) ToneBadge(data.pending.size.fa(), g.members)
         }
@@ -206,19 +205,5 @@ fun OverviewScreen(me: Me, data: CoachHome, stale: Boolean, vm: CoachViewModel, 
             }
         }
         Spacer(Modifier.height(8.dp))
-    }
-}
-
-@Composable
-private fun QuickAction(icon: androidx.compose.ui.graphics.vector.ImageVector, tone: androidx.compose.ui.graphics.Color, title: String, hint: String, onClick: () -> Unit) {
-    AppCard(onClick = onClick) {
-        Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            IconBubble(icon, tone)
-            Column(modifier = Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleSmall)
-                Text(hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Icon(Icons.Rounded.ChevronLeft, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
     }
 }

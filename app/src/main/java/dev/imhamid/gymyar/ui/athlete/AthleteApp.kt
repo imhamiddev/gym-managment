@@ -31,8 +31,6 @@ import dev.imhamid.gymyar.ui.theme.gym
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.put
 
-private data class NavTab(val route: String, val label: String, val icon: ImageVector)
-
 private fun NavController.goTab(route: String) = navigate(route) {
     popUpTo(graph.findStartDestination().id) { saveState = true }
     launchSingleTop = true
@@ -67,6 +65,36 @@ private fun JoinGymCard(vm: AthleteViewModel) {
     }
 }
 
+/** Home tab before the athlete is an approved member: join a gym, or wait for the coach. */
+@Composable
+private fun HomeContent(me: Me, vm: AthleteViewModel, st: AthleteViewModel.UiState, onScan: () -> Unit) {
+    val g = MaterialTheme.gym
+    val scope = rememberCoroutineScope()
+    val membership = st.data.membership
+    when {
+        membership == null -> ScreenColumn {
+            if (st.stale) Banner("حالت آفلاین: آخرین اطلاعات ذخیره‌شده نمایش داده می‌شود.", g.warning)
+            PageHeader("خوش آمدید، ${me.firstName}", "برای شروع به یک باشگاه بپیوندید.", Icons.Rounded.FitnessCenter)
+            JoinGymCard(vm)
+        }
+        !membership.isApproved -> ScreenColumn {
+            PageHeader("منتظر تایید مربی", membership.gym.name, Icons.Rounded.HourglassTop)
+            AppCard {
+                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text(
+                        "درخواست شما برای باشگاه «${membership.gym.name}» ارسال شد. به‌محض اینکه مربی تایید کند، پنل شما فعال می‌شود. صفحه را به پایین بکشید تا به‌روز شود.",
+                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    SecondaryButton("لغو درخواست", onClick = {
+                        scope.launch { vm.act("cancel_request")?.let { UiEvents.toast(it) } }
+                    }, modifier = Modifier.fillMaxWidth(), tone = g.danger)
+                }
+            }
+        }
+        else -> AthleteHome(me, membership, st.stale, onScan = onScan)
+    }
+}
+
 @Composable
 fun AthleteApp(me: Me, app: AppViewModel) {
     val vm: AthleteViewModel = viewModel()
@@ -75,88 +103,67 @@ fun AthleteApp(me: Me, app: AppViewModel) {
     val entry by nav.currentBackStackEntryAsState()
     val route = entry?.destination?.route
     val membership = st.data.membership
-    val g = MaterialTheme.gym
-    val scope = rememberCoroutineScope()
-
-    val tabs = listOf(
-        NavTab("home", "پنل من", Icons.Rounded.Dashboard),
-        NavTab("profile", "پروفایل", Icons.Rounded.Person),
-    )
-    val motion = remember { NavMotion(tabs.map { it.route }.toSet()) }
-
-    if (!st.loaded && st.error == null) {
-        ScreenSkeleton()
-        return
-    }
-    if (!st.loaded) {
-        Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterVertically), horizontalAlignment = Alignment.CenterHorizontally) {
-            ErrorText(st.error)
-            PrimaryButton("تلاش دوباره", onClick = { vm.refresh() })
-            SecondaryButton("خروج از حساب", onClick = { app.logout() })
-        }
-        return
-    }
-
-    // The scanner is full screen, without the bottom bar.
+    val approved = membership?.isApproved == true
     var scanning by rememberSaveable { mutableStateOf(false) }
-    if (scanning) {
-        BackHandler { scanning = false }
-        ScannerScreen(vm = vm, onClose = { scanning = false })
-        return
-    }
 
-    Column(Modifier.fillMaxSize()) {
-        Box(Modifier.weight(1f)) {
-            RefreshBox(refreshing = st.refreshing, onRefresh = { vm.refresh() }) {
-                NavHost(
-                    navController = nav, startDestination = "home", modifier = Modifier.fillMaxSize(),
-                    enterTransition = motion.enter, exitTransition = motion.exit,
-                    popEnterTransition = motion.popEnter, popExitTransition = motion.popExit,
-                ) {
-                    composable("home") {
-                        when {
-                            membership == null -> Column(
-                                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(16.dp),
-                            ) {
-                                if (st.stale) Banner("حالت آفلاین: آخرین اطلاعات ذخیره‌شده نمایش داده می‌شود.", g.warning)
-                                PageHeader("خوش آمدید، ${me.firstName}", "برای شروع به یک باشگاه بپیوندید.", Icons.Rounded.FitnessCenter)
-                                JoinGymCard(vm)
+    val specs = if (approved) listOf(
+        NavSpec("home", "خانه", Icons.Rounded.Home),
+        NavSpec("attendance", "حضور", Icons.Rounded.EventAvailable),
+        NavSpec("scan", "ثبت حضور با QR", Icons.Rounded.QrCodeScanner, center = true),
+        NavSpec("club", "باشگاه", Icons.Rounded.FitnessCenter),
+        NavSpec("profile", "پروفایل", Icons.Rounded.Person),
+    ) else listOf(
+        NavSpec("home", "خانه", Icons.Rounded.Home),
+        NavSpec("profile", "پروفایل", Icons.Rounded.Person),
+    )
+    val motion = remember(approved) { NavMotion(specs.filter { !it.center }.map { it.route }.toSet()) }
+
+    Box(Modifier.fillMaxSize()) {
+        when {
+            !st.loaded && st.error == null -> ScreenSkeleton()
+            !st.loaded -> Column(
+                Modifier.fillMaxSize().padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterVertically),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                ErrorText(st.error)
+                PrimaryButton("تلاش دوباره", onClick = { vm.refresh() })
+                SecondaryButton("خروج از حساب", onClick = { app.logout() })
+            }
+            // The scanner is full screen, without the bottom bar.
+            scanning -> {
+                BackHandler { scanning = false }
+                ScannerScreen(vm = vm, onClose = { scanning = false })
+            }
+            else -> Column(Modifier.fillMaxSize()) {
+                Box(Modifier.weight(1f)) {
+                    RefreshBox(refreshing = st.refreshing, onRefresh = { vm.refresh() }) {
+                        NavHost(
+                            navController = nav, startDestination = "home", modifier = Modifier.fillMaxSize(),
+                            enterTransition = motion.enter, exitTransition = motion.exit,
+                            popEnterTransition = motion.popEnter, popExitTransition = motion.popExit,
+                        ) {
+                            composable("home") { HomeContent(me, vm, st, onScan = { scanning = true }) }
+                            composable("attendance") {
+                                if (membership != null && approved) AthleteAttendance(membership, st.stale)
+                                else HomeContent(me, vm, st, onScan = { scanning = true })
                             }
-                            !membership.isApproved -> Column(
-                                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(16.dp),
-                            ) {
-                                PageHeader("منتظر تایید مربی", membership.gym.name, Icons.Rounded.HourglassTop, g.warning)
-                                AppCard {
-                                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                        Text(
-                                            "درخواست شما برای باشگاه «${membership.gym.name}» ارسال شد. به‌محض اینکه مربی تایید کند، پنل شما فعال می‌شود. صفحه را به پایین بکشید تا به‌روز شود.",
-                                            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                        SecondaryButton("لغو درخواست", onClick = {
-                                            scope.launch { vm.act("cancel_request")?.let { UiEvents.toast(it) } }
-                                        }, modifier = Modifier.fillMaxWidth(), tone = g.danger)
-                                    }
+                            composable("club") {
+                                if (membership != null && approved) AthleteClub(membership, st.stale)
+                                else HomeContent(me, vm, st, onScan = { scanning = true })
+                            }
+                            composable("profile") {
+                                ProfileScreen(me, app, membership?.gym?.name, Modifier.fillMaxSize()) {
+                                    if (membership != null && approved) AthleteBodyCard(membership)
                                 }
                             }
-                            else -> AthleteDashboard(me, membership, st.stale, onScan = { scanning = true })
                         }
                     }
-                    composable("profile") { ProfileScreen(me, app, membership?.gym?.name, Modifier.fillMaxSize()) { ReminderCard() } }
                 }
-            }
-        }
-        run {
-            NavigationBar(windowInsets = WindowInsets(0, 0, 0, 0), containerColor = MaterialTheme.colorScheme.surface) {
-                tabs.forEach { t ->
-                    NavigationBarItem(
-                        selected = route == t.route,
-                        onClick = { nav.goTab(t.route) },
-                        icon = { TabIcon(t.icon, selected = route == t.route) },
-                        label = { Text(t.label, style = MaterialTheme.typography.labelSmall, maxLines = 1) },
-                    )
-                }
+                FloatingNavBar(
+                    items = specs, selected = route,
+                    onSelect = { r -> if (r == "scan") scanning = true else nav.goTab(r) },
+                )
             }
         }
     }
