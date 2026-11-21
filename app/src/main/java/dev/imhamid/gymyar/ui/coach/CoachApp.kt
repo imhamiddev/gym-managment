@@ -86,7 +86,7 @@ fun CoachApp(me: Me, app: AppViewModel) {
         NavSpec("profile", "پروفایل", Icons.Rounded.Person),
     )
     val showBar = specs.any { it.route == route }
-    val motion = remember(specs.size) { NavMotion(specs.map { it.route }.toSet()) }
+    val motion = remember(specs.size) { NavMotion(specs.map { it.route }) }
 
     Box(Modifier.fillMaxSize()) {
         when {

@@ -8,6 +8,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -70,29 +72,55 @@ fun TabIcon(icon: ImageVector, selected: Boolean) {
 // ------------------------------------------------------------------ navigation motion
 
 private const val SLIDE_MS = 320
+private const val TAB_MS = 300
 
-private fun AnimatedContentTransitionScope<NavBackStackEntry>.isTabSwitch(top: Set<String>): Boolean =
-    initialState.destination.route in top && targetState.destination.route in top
+private typealias NavScope = AnimatedContentTransitionScope<NavBackStackEntry>
 
 /**
- * Switching between bottom-bar tabs is instant (no fade, no slide).
- * Opening or closing a detail screen slides it in from the leading edge (RTL aware).
+ * Motion between screens.
+ *
+ * Bottom-bar tabs: a short, direction-aware slide (towards the side the tab sits on, RTL aware)
+ * with a fade-through, so switching tabs feels connected instead of jumping.
+ * Detail screens (opened from a tab): slide in from the leading edge and back out.
+ *
+ * [tabs] is the bottom-bar routes in bar order.
  */
-class NavMotion(private val top: Set<String>) {
-    val enter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = {
-        if (isTabSwitch(top)) EnterTransition.None
-        else slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(SLIDE_MS, easing = FastOutSlowInEasing))
+class NavMotion(private val tabs: List<String>) {
+    private val top = tabs.toSet()
+
+    private fun NavScope.isTabSwitch(): Boolean =
+        initialState.destination.route in top && targetState.destination.route in top
+
+    /** True when the target tab sits after the current one in the bar. */
+    private fun NavScope.goingForward(): Boolean =
+        tabs.indexOf(targetState.destination.route) > tabs.indexOf(initialState.destination.route)
+
+    private val tabEase = FastOutSlowInEasing
+
+    val enter: NavScope.() -> EnterTransition = {
+        if (isTabSwitch()) {
+            val dir = if (goingForward()) AnimatedContentTransitionScope.SlideDirection.End else AnimatedContentTransitionScope.SlideDirection.Start
+            slideIntoContainer(dir, tween(TAB_MS, easing = tabEase), initialOffset = { it / 6 }) +
+                fadeIn(tween(TAB_MS - 80, delayMillis = 80, easing = tabEase))
+        } else {
+            slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(SLIDE_MS, easing = FastOutSlowInEasing))
+        }
     }
-    val exit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
-        if (isTabSwitch(top)) ExitTransition.None
-        else slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(SLIDE_MS, easing = FastOutSlowInEasing), targetOffset = { it / 4 })
+    val exit: NavScope.() -> ExitTransition = {
+        if (isTabSwitch()) {
+            val dir = if (goingForward()) AnimatedContentTransitionScope.SlideDirection.Start else AnimatedContentTransitionScope.SlideDirection.End
+            slideOutOfContainer(dir, tween(TAB_MS, easing = tabEase), targetOffset = { it / 6 }) +
+                fadeOut(tween(110, easing = tabEase))
+        } else {
+            slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(SLIDE_MS, easing = FastOutSlowInEasing), targetOffset = { it / 4 })
+        }
     }
-    val popEnter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = {
-        if (isTabSwitch(top)) EnterTransition.None
+    val popEnter: NavScope.() -> EnterTransition = {
+        if (isTabSwitch()) enter()
         else slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(SLIDE_MS, easing = FastOutSlowInEasing), initialOffset = { it / 4 })
     }
-    val popExit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
-        if (isTabSwitch(top)) ExitTransition.None
+    val popExit: NavScope.() -> ExitTransition = {
+        if (isTabSwitch()) exit()
         else slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(SLIDE_MS, easing = FastOutSlowInEasing))
     }
 }

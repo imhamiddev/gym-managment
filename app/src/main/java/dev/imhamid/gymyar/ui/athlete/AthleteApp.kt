@@ -116,7 +116,7 @@ fun AthleteApp(me: Me, app: AppViewModel) {
         NavSpec("home", "خانه", Icons.Rounded.Home),
         NavSpec("profile", "پروفایل", Icons.Rounded.Person),
     )
-    val motion = remember(approved) { NavMotion(specs.filter { !it.center }.map { it.route }.toSet()) }
+    val motion = remember(approved) { NavMotion(specs.filter { !it.center }.map { it.route }) }
 
     Box(Modifier.fillMaxSize()) {
         when {
