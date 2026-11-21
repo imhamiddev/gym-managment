@@ -109,6 +109,12 @@ fun minutesTehran(): Int {
 
 fun jalaliOf(d: LocalDate): Jalali.J = Jalali.toJalali(d.year, d.monthValue, d.dayOfMonth)
 
+/** Jalali year * 100 + month of [d] (e.g. 140508), a sortable key for grouping by month. */
+fun jalaliMonthKey(d: LocalDate): Int { val j = jalaliOf(d); return j.jy * 100 + j.jm }
+
+/** "آبان ۱۴۰۵" for a key from [jalaliMonthKey]. */
+fun jalaliMonthLabel(key: Int): String = "${Jalali.MONTHS[key % 100 - 1]} ${(key / 100).fa()}"
+
 fun jalaliToDate(jy: Int, jm: Int, jd: Int): LocalDate? {
     if (!Jalali.isValid(jy, jm, jd)) return null
     val g = Jalali.toGregorian(jy, jm, jd)

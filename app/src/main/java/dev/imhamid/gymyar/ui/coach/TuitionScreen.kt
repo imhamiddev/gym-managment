@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
@@ -31,8 +32,15 @@ fun TuitionScreen(data: CoachHome, stale: Boolean, vm: CoachViewModel) {
     var q by remember { mutableStateOf("") }
     var selectedId by remember { mutableStateOf<String?>(null) }
 
-    val allPayments = data.members.flatMap { it.payments }
-    val total = allPayments.sumOf { it.amount }
+    // Every payment with its member, grouped by the Jalali month it was paid in.
+    val rows = remember(data.members) { data.members.flatMap { m -> m.payments.map { m to it } } }
+    val thisMonth = remember { jalaliMonthKey(today) }
+    val months = remember(rows) { (rows.map { jalaliMonthKey(it.second.paidDate) } + thisMonth).distinct().sortedDescending() }
+    var month by rememberSaveable { mutableStateOf(thisMonth) }
+    val monthRows = remember(rows, month) {
+        rows.filter { jalaliMonthKey(it.second.paidDate) == month }.sortedByDescending { it.second.paidDate }
+    }
+    val monthTotal = monthRows.sumOf { it.second.amount }
     val sorted = remember(data.members) { CoachViewModel.sortByName(data.members) { "${it.lastName} ${it.firstName}" } }
     val list = sorted.filter { it.fullName.contains(q.trim()) }
     val selected = data.members.firstOrNull { it.id == selectedId }
@@ -44,15 +52,43 @@ fun TuitionScreen(data: CoachHome, stale: Boolean, vm: CoachViewModel) {
         if (stale) Banner("حالت آفلاین: آخرین اطلاعات ذخیره‌شده نمایش داده می‌شود.", g.warning)
         PageHeader("مدیریت شهریه", "ثبت و ویرایش پرداخت‌ها", Icons.Rounded.Payments, g.tuition)
 
+        PillTabs(months.map { it.toString() to jalaliMonthLabel(it) }, month.toString(), { month = it.toInt() })
+
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
-            InfoTile(Icons.Rounded.Receipt, g.tuition, "پرداخت ثبت‌شده", allPayments.size.fa(), Modifier.weight(1f).fillMaxHeight())
+            InfoTile(Icons.Rounded.Receipt, g.tuition, "پرداخت‌های این ماه", monthRows.size.fa(), Modifier.weight(1f).fillMaxHeight())
             InfoTile(
-                Icons.Rounded.Payments, g.success, "مجموع مبلغ",
-                formatToman(total).removeSuffix(" تومان"), Modifier.weight(1f).fillMaxHeight(), unit = "تومان",
+                Icons.Rounded.Payments, g.success, "مجموع این ماه",
+                formatToman(monthTotal).removeSuffix(" تومان"), Modifier.weight(1f).fillMaxHeight(), unit = "تومان",
             )
         }
 
-        SectionTitle("اعضای باشگاه")
+        SectionTitle("پرداخت‌های ${jalaliMonthLabel(month)}")
+        AppCard {
+            if (monthRows.isEmpty()) {
+                EmptyState(Icons.Rounded.Receipt, g.tuition, "در این ماه پرداختی ثبت نشده", "از فهرست اعضا در پایین شهریه ثبت کنید.")
+            } else {
+                monthRows.forEachIndexed { i, (m, p) ->
+                    if (i > 0) HorizontalDivider(color = g.border)
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable { selectedId = m.id }.padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Avatar(m.firstName, m.lastName, size = 40.dp)
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(m.fullName, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
+                            Text(
+                                "${formatJalali(p.paidDate)} · ${formatDays(p.durationDays)}",
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
+                            )
+                        }
+                        Text(formatToman(p.amount), style = MaterialTheme.typography.titleSmall)
+                    }
+                }
+            }
+        }
+
+        SectionTitle("ثبت شهریه برای اعضا")
         if (data.members.isNotEmpty()) SearchField(q, { q = it }, "جستجوی نام یا نام خانوادگی")
         AppCard {
             when {
