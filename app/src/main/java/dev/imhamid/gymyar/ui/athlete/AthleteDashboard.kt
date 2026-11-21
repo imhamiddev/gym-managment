@@ -258,8 +258,13 @@ fun AthleteClub(m: AthleteMembership, stale: Boolean) {
             val openToday = isGymDay(gym.workDays, today)
             AppCard {
                 Column(Modifier.padding(horizontal = 18.dp, vertical = 6.dp)) {
-                    InfoLine("مربی", gym.coachName)
+                    InfoLine("مربی اصلی", gym.coachName)
                     HorizontalDivider(color = g.border)
+                    val others = gym.coaches.filter { !it.isMain }
+                    if (others.isNotEmpty()) {
+                        InfoLine(if (others.size == 1) "مربی دیگر" else "مربیان دیگر", others.joinToString("، ") { it.name })
+                        HorizontalDivider(color = g.border)
+                    }
                     InfoLine("روزهای فعال", describeDays(gym.workDays))
                     HorizontalDivider(color = g.border)
                     InfoLine("ساعت کاری", formatHours(gym.openTime, gym.closeTime))

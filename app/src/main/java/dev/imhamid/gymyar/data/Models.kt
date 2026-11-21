@@ -104,7 +104,14 @@ data class CoachItem(
 )
 
 @Serializable
-data class CoachesDto(val coaches: List<CoachItem> = emptyList())
+data class CoachesDto(
+    val owner: CoachItem? = null,
+    /** User id of the assistant shown to athletes as the main coach; null means the owner. */
+    @SerialName("display_coach_id") val displayCoachId: String? = null,
+    val coaches: List<CoachItem> = emptyList(),
+) {
+    val mainCoachId: String? get() = displayCoachId ?: owner?.userId
+}
 
 @Serializable
 data class CheckinInfo(
@@ -118,10 +125,18 @@ data class CheckinInfo(
 data class CodeDto(val code: String)
 
 @Serializable
+data class AthleteCoach(
+    val name: String,
+    @SerialName("is_main") val isMain: Boolean = false,
+    @SerialName("is_owner") val isOwner: Boolean = false,
+)
+
+@Serializable
 data class AthleteGym(
     val id: String,
     val name: String,
     @SerialName("coach_name") val coachName: String = "",
+    val coaches: List<AthleteCoach> = emptyList(),
     @SerialName("work_days") val workDays: List<Int> = emptyList(),
     @SerialName("open_time") val openTime: String = "06:00",
     @SerialName("close_time") val closeTime: String = "22:00",
