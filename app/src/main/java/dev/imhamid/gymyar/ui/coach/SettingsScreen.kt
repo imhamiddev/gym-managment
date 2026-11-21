@@ -231,6 +231,8 @@ private fun CoachesCard(vm: CoachViewModel) {
     val g = MaterialTheme.gym
     val scope = rememberCoroutineScope()
     var coaches by remember { mutableStateOf<List<CoachItem>>(emptyList()) }
+    var owner by remember { mutableStateOf<CoachItem?>(null) }
+    var mainId by remember { mutableStateOf<String?>(null) }
     var reload by remember { mutableIntStateOf(0) }
     var phone by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
@@ -239,7 +241,7 @@ private fun CoachesCard(vm: CoachViewModel) {
 
     LaunchedEffect(reload) {
         when (val r = Repo.coachCoaches()) {
-            is Res.Ok -> coaches = r.value.coaches
+            is Res.Ok -> { coaches = r.value.coaches; owner = r.value.owner; mainId = r.value.mainCoachId }
             is Res.Fail -> error = r.message
         }
     }
@@ -251,15 +253,40 @@ private fun CoachesCard(vm: CoachViewModel) {
                 "مربی کمکی می‌تواند اعضا، شهریه و حضور و غیاب را مدیریت کند، اما به تنظیمات باشگاه دسترسی ندارد. مربی باید قبلاً با نقش «مربی» ثبت‌نام کرده باشد.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            coaches.forEach { c ->
+            val pickable = owner != null && coaches.isNotEmpty()
+            if (pickable) {
+                Text(
+                    "مربی اصلی همان کسی است که به ورزشکاران نشان داده می‌شود. پیش‌فرض خودِ صاحب باشگاه است، ولی می‌توانید یکی از مربیان کمکی را انتخاب کنید.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            fun pickMain(c: CoachItem) {
+                scope.launch {
+                    val err = vm.act("set_display_coach", Api.params { put("p_user", if (c.userId == owner?.userId) null else c.userId) })
+                    if (err != null) error = err else { reload++; UiEvents.toast("مربی اصلی تغییر کرد") }
+                }
+            }
+            (listOfNotNull(owner) + coaches).forEach { c ->
+                val isOwnerRow = c.userId == owner?.userId
+                val isMain = pickable && c.userId == mainId
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     val parts = c.name.split(" ", limit = 2)
                     Avatar(parts.firstOrNull().orEmpty(), parts.getOrElse(1) { "" }, size = 40.dp)
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(c.name, style = MaterialTheme.typography.bodyLarge)
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(if (isOwnerRow) "${c.name} (شما)" else c.name, style = MaterialTheme.typography.bodyLarge)
                         Text(c.phone.fa(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (isMain) ToneBadge("مربی اصلی", g.success, dot = true)
+                        else if (pickable) {
+                            Text(
+                                "انتخاب به‌عنوان مربی اصلی",
+                                style = MaterialTheme.typography.labelMedium, color = g.accent,
+                                modifier = Modifier.clickable { pickMain(c) }.padding(vertical = 2.dp),
+                            )
+                        }
                     }
-                    IconButton(onClick = { removing = c }) { Icon(Icons.Rounded.PersonRemove, contentDescription = "حذف مربی", tint = g.danger) }
+                    if (!isOwnerRow) {
+                        IconButton(onClick = { removing = c }) { Icon(Icons.Rounded.PersonRemove, contentDescription = "حذف مربی", tint = g.danger) }
+                    }
                 }
             }
             AppField(phone, { phone = it }, "شماره‌ی مربی", keyboardType = KeyboardType.Phone, ltr = true, placeholder = "09121234567")
