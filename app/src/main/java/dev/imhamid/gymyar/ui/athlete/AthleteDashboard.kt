@@ -75,6 +75,8 @@ import dev.imhamid.gymyar.util.formatJalaliLong
 import dev.imhamid.gymyar.util.formatToman
 import dev.imhamid.gymyar.util.isBirthday
 import dev.imhamid.gymyar.util.isGymDay
+import dev.imhamid.gymyar.util.jalaliMonthKey
+import dev.imhamid.gymyar.util.jalaliMonthLabel
 import dev.imhamid.gymyar.util.jsWeekday
 import dev.imhamid.gymyar.util.remainingDays
 import dev.imhamid.gymyar.util.todayTehran
@@ -296,19 +298,28 @@ fun AthleteClub(m: AthleteMembership, stale: Boolean) {
             }
 
             SectionTitle("تاریخچه پرداخت‌ها") { if (m.payments.isNotEmpty()) ToneBadge(m.payments.size.fa(), g.tuition) }
-            AppCard {
-                if (m.payments.isEmpty()) {
+            if (m.payments.isEmpty()) {
+                AppCard {
                     EmptyState(Icons.Rounded.Receipt, g.tuition, "پرداختی ثبت نشده", "بعد از ثبت شهریه توسط مربی، اینجا می‌بینید.")
-                } else {
-                    Column(Modifier.padding(horizontal = 16.dp)) {
-                        m.payments.forEachIndexed { i, p ->
-                            if (i > 0) HorizontalDivider(color = g.border)
-                            Column(Modifier.padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                Text(formatToman(p.amount), style = MaterialTheme.typography.titleSmall)
-                                Text(
-                                    "${formatJalali(p.paidDate)} · ${formatDays(p.durationDays)} · تا ${formatJalali(p.endDate)}",
-                                    style = MaterialTheme.typography.bodySmall, color = mutedColor(),
-                                )
+                }
+            } else {
+                // Payments arrive newest first, so the groups keep that order. One card per Jalali month.
+                m.payments.groupBy { jalaliMonthKey(it.paidDate) }.forEach { (key, list) ->
+                    Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(jalaliMonthLabel(key), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                        Text(formatToman(list.sumOf { it.amount }), style = MaterialTheme.typography.labelMedium, color = mutedColor())
+                    }
+                    AppCard {
+                        Column(Modifier.padding(horizontal = 16.dp)) {
+                            list.forEachIndexed { i, p ->
+                                if (i > 0) HorizontalDivider(color = g.border)
+                                Column(Modifier.padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text(formatToman(p.amount), style = MaterialTheme.typography.titleSmall)
+                                    Text(
+                                        "${formatJalali(p.paidDate)} · ${formatDays(p.durationDays)} · تا ${formatJalali(p.endDate)}",
+                                        style = MaterialTheme.typography.bodySmall, color = mutedColor(),
+                                    )
+                                }
                             }
                         }
                     }
