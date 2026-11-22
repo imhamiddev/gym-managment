@@ -131,7 +131,7 @@ fun ScannerScreen(vm: AthleteViewModel, onClose: () -> Unit) {
         }
         working = true
         scope.launch {
-            when (val r = Repo.act("check_in", Api.params { put("p_gym", parsed.first); put("p_token", parsed.second) })) {
+            when (val r = Repo.act("check_in", Api.params { put("p_gym", if (parsed.first.startsWith("cm")) vm.state.value.data.membership?.gym?.id ?: parsed.first else parsed.first); put("p_token", parsed.second) })) {
                 is Res.Ok -> {
                     val gym = r.value["gym_name"]?.jsonPrimitive?.contentOrNull
                     message = true to (if (gym != null) "حضور شما در «$gym» ثبت شد." else "حضور شما ثبت شد.")
