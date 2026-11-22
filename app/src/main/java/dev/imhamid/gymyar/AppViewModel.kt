@@ -7,10 +7,16 @@ import dev.imhamid.gymyar.data.Me
 import dev.imhamid.gymyar.data.Repo
 import dev.imhamid.gymyar.data.Res
 import dev.imhamid.gymyar.data.Settings
+import dev.imhamid.gymyar.data.Updater
+import dev.imhamid.gymyar.ui.components.UiEvents
 import dev.imhamid.gymyar.ui.theme.ThemeMode
+import android.os.SystemClock
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import java.io.File
 
 /** Session + current user + theme. Everything else is loaded per screen. */
 class AppViewModel : ViewModel() {
@@ -28,7 +34,73 @@ class AppViewModel : ViewModel() {
     private val _theme = MutableStateFlow(Settings.themeMode)
     val themeMode: StateFlow<ThemeMode> get() = _theme
 
+    // ---- in-app update
+    sealed interface UpdatePhase {
+        data object Available : UpdatePhase
+        data class Downloading(val progress: Float?) : UpdatePhase
+        data class Ready(val file: File) : UpdatePhase
+        data class Failed(val message: String) : UpdatePhase
+    }
+
+    data class UpdateState(val release: Updater.Release, val phase: UpdatePhase = UpdatePhase.Available, val dialog: Boolean = true)
+
+    private val _update = MutableStateFlow<UpdateState?>(null)
+    val update: StateFlow<UpdateState?> get() = _update
+
+    private var lastCheck = 0L
+    private var downloadJob: Job? = null
+
+    /** Looks for a newer release; called whenever the app is opened (throttled so a quick app switch does not refetch). */
+    fun checkForUpdate() {
+        val now = SystemClock.elapsedRealtime()
+        if (lastCheck != 0L && now - lastCheck < 10 * 60_000L) return
+        lastCheck = now
+        viewModelScope.launch {
+            val rel = Updater.fetchLatest()
+            if (rel == null) { lastCheck = 0L; return@launch }
+            if (!Updater.isNewer(rel.version, Updater.currentVersion)) return@launch
+            if (_update.value?.release?.version == rel.version) return@launch
+            _update.value = UpdateState(rel)
+        }
+    }
+
+    fun openUpdateDialog() { _update.value = _update.value?.copy(dialog = true) }
+    fun closeUpdateDialog() { _update.value = _update.value?.copy(dialog = false) }
+
+    fun startDownload() {
+        val cur = _update.value ?: return
+        if (downloadJob?.isActive == true) return
+        _update.value = cur.copy(phase = UpdatePhase.Downloading(null))
+        downloadJob = viewModelScope.launch {
+            try {
+                val f = Updater.download(GymyarApp.instance, cur.release) { p ->
+                    _update.value = _update.value?.copy(phase = UpdatePhase.Downloading(p))
+                }
+                _update.value = _update.value?.copy(phase = UpdatePhase.Ready(f))
+            } catch (e: CancellationException) {
+                _update.value = _update.value?.copy(phase = UpdatePhase.Available)
+                throw e
+            } catch (e: Exception) {
+                _update.value = _update.value?.copy(phase = UpdatePhase.Failed("دانلود انجام نشد. اتصال اینترنت را بررسی و دوباره تلاش کنید."))
+            }
+        }
+    }
+
+    fun cancelDownload() { downloadJob?.cancel() }
+
+    fun installUpdate(context: android.content.Context) {
+        val ready = (_update.value?.phase as? UpdatePhase.Ready) ?: return
+        if (!Updater.canInstall(context)) {
+            UiEvents.toast("اجازه‌ی نصب برنامه را برای باشگاه‌یار فعال کنید، سپس برگردید و دوباره «نصب» را بزنید.")
+            Updater.openInstallPermissionSettings(context)
+            return
+        }
+        runCatching { Updater.install(context, ready.file) }
+            .onFailure { UiEvents.toast("نصب شروع نشد. دوباره تلاش کنید.") }
+    }
+
     init {
+        checkForUpdate()
         viewModelScope.launch {
             Api.signedIn.collect { signedIn ->
                 if (!signedIn) {

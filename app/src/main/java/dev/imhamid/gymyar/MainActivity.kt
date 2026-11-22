@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -39,6 +40,8 @@ import dev.imhamid.gymyar.ui.components.PrimaryButton
 import dev.imhamid.gymyar.ui.components.ScreenSkeleton
 import dev.imhamid.gymyar.ui.components.SecondaryButton
 import dev.imhamid.gymyar.ui.components.UiEvents
+import dev.imhamid.gymyar.ui.components.UpdateBanner
+import dev.imhamid.gymyar.ui.components.UpdateDialog
 import dev.imhamid.gymyar.ui.theme.GymyarTheme
 import dev.imhamid.gymyar.ui.theme.ThemeMode
 
@@ -67,11 +70,17 @@ class MainActivity : ComponentActivity() {
             GymyarTheme(mode) { AppRoot(appVm) }
         }
     }
+
+    override fun onStart() {
+        super.onStart()
+        appVm.checkForUpdate()
+    }
 }
 
 @Composable
 private fun AppRoot(vm: AppViewModel) {
     val state by vm.state.collectAsStateWithLifecycle()
+    val update by vm.update.collectAsStateWithLifecycle()
     val snack = remember { SnackbarHostState() }
     LaunchedEffect(Unit) { UiEvents.messages.collect { snack.showSnackbar(it) } }
 
@@ -80,7 +89,9 @@ private fun AppRoot(vm: AppViewModel) {
         containerColor = Color.Transparent,
         snackbarHost = { SnackbarHost(snack) },
     ) { inner ->
-        Box(Modifier.fillMaxSize().padding(inner)) {
+        Column(Modifier.fillMaxSize().padding(inner)) {
+        update?.let { UpdateBanner(it, onClick = vm::openUpdateDialog) }
+        Box(Modifier.fillMaxWidth().weight(1f)) {
             when (val s = state) {
                 AppViewModel.State.Loading -> Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
                     BrandMark()
@@ -103,6 +114,17 @@ private fun AppRoot(vm: AppViewModel) {
                 }
             }
         }
+        }
     }
+    }
+
+    update?.takeIf { it.dialog }?.let {
+        UpdateDialog(
+            state = it,
+            onDismiss = vm::closeUpdateDialog,
+            onDownload = vm::startDownload,
+            onCancel = vm::cancelDownload,
+            onInstall = vm::installUpdate,
+        )
     }
 }
