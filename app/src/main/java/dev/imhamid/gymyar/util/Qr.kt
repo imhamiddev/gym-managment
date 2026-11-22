@@ -26,11 +26,19 @@ import java.io.File
 object Qr {
     private const val SCHEME = "gymyar://checkin"
 
+    // QR چاپ‌شده‌ی قبلی باشگاه راسان: https://gym-managment-olive.vercel.app/checkin?g=<شناسه‌ی قدیمی>&t=<توکن>
+    private const val LEGACY_PREFIX = "https://gym-managment-olive.vercel.app/checkin"
+    private const val LEGACY_GYM = "cmwjtvya90001ij07juotnd46"
+
     fun payload(gymId: String, token: String) = "$SCHEME?g=$gymId&t=$token"
 
-    /** Returns (gymId, token) or null if the text is not one of our QR codes. */
+    /** توکن قدیمی راسان کوتاه است (۲۴ کاراکتر)؛ اگر توکن باشگاه همان باشد، QR چاپ‌شده‌ی قبلی ساخته می‌شود. */
+    fun payload(info: dev.imhamid.gymyar.data.CheckinInfo) =
+        if (info.token.length < 40) "$LEGACY_PREFIX?g=$LEGACY_GYM&t=${info.token}" else payload(info.gymId, info.token)
+
+    /** Returns (gymId, token) or null if the text is not one of our QR codes. gymId برای QR قدیمی cuid است. */
     fun parse(text: String): Pair<String, String>? {
-        if (!text.startsWith(SCHEME)) return null
+        if (!text.startsWith(SCHEME) && !text.startsWith(LEGACY_PREFIX)) return null
         val query = text.substringAfter('?', "")
         val map = query.split('&').mapNotNull {
             val i = it.indexOf('=')

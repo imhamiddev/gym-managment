@@ -61,7 +61,7 @@ fun QrScreen(vm: CoachViewModel) {
     }
     LaunchedEffect(info, color) {
         val i = info ?: return@LaunchedEffect
-        val payload = Qr.payload(i.gymId, i.token)
+        val payload = Qr.payload(i)
         withContext(Dispatchers.Default) {
             poster = Qr.poster(context, i.gymName, payload, color == "color")
         }
